@@ -1,0 +1,12 @@
+{
+    "ManageKey": "key",
+    "ManageSecret": "secret",
+    "LogPath": "/var/log/yig-iam/iam.log",
+    "PanicLogPath":"/var/log/yig-iam/panic.log",
+    "PidFile": "/var/run/yig-iam/iam.pid",
+    "BindPort": 8888,
+    "DatabaseConnectionString": "root:123456@/iam",
+    "DebugMode": false,
+    "LogLeval": 5,
+    "TokenExpire": 3600
+}

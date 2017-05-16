@@ -1,0 +1,58 @@
+grant all on iam.* to iam@"127.0.0.1" identified by "123456" with grant option;
+
+create table User(
+userName varchar(50) primary key,
+password varchar(20),
+type varchar(10),
+email varchar(50),
+displayName varchar(50),
+accountId varchar(50),
+status varchar(10),
+created varchar(50),
+updated varchar(50)
+)default charset=utf8;
+
+create table Project(
+projectId varchar(20) primary key,
+projectName varchar(50),
+accountId varchar(50),
+description varchar(50),
+status varchar(10),
+created varchar(50),
+updated varchar(50)
+)default charset=utf8;
+
+create table UserProject(
+id int auto_increment primary key,
+projectId varchar(20),
+userName varchar(50),
+created varchar(50)
+)default charset=utf8;
+
+create table ProjectService(
+id int auto_increment primary key,
+projectId varchar(20),
+service varchar(20),
+accountId varchar(50),
+created varchar(50)
+)default charset=utf8;
+
+create table AkSk(
+accessKey varchar(20) primary key,
+accessSecret varchar(40),
+projectId varchar(20),
+accountId varchar(50),
+name varchar(20),
+created varchar(50)
+)default charset=utf8;
+
+create table Token(
+token varchar(40) primary key,
+userName varchar(50),
+accountId varchar(50),
+type varchar(10),
+created varchar(50),
+expired varchar(50)
+)default charset=utf8;
+
+INSERT INTO User VALUES ("root", "admin", "ROOT", "", "", "", "", "", "");

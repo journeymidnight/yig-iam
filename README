@@ -1,0 +1,17 @@
+#Prepare
+####安装mysql 
+
+设置root 123456 
+
+mysql -u root -p123456
+
+创建db iam
+
+use iam
+
+source config/create.sql
+
+cp config/iam.json /etc/yig/iam.json
+
+#####测试用例
+test/api_test.go

@@ -43,10 +43,10 @@ created
 package api
 
 import (
-	"github.com/kataras/iris"
-	"legitlab.letv.cn/yig/iam/helper"
-	"legitlab.letv.cn/yig/iam/db"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
+	"gopkg.in/iris.v4"
+	"github.com/journeymidnight/yig-iam/helper"
+	"github.com/journeymidnight/yig-iam/db"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
 
 func CreateUser(c *iris.Context, query QueryRequest)  {

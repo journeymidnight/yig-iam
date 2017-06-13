@@ -1,7 +1,7 @@
 package api
 import (
-	"github.com/kataras/iris"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
+	"gopkg.in/iris.v4"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
 
 func ApiHandle(c *iris.Context) {

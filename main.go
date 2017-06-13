@@ -7,12 +7,12 @@ import (
 	"syscall"
 	//	"time"
 	//	"syscall"
-	"github.com/kataras/iris"
-	"legitlab.letv.cn/yig/iam/helper"
-	"legitlab.letv.cn/yig/iam/log"
-	"legitlab.letv.cn/yig/iam/api"
-	"legitlab.letv.cn/yig/iam/db"
-	tokenMiddleware "legitlab.letv.cn/yig/iam/middleware/token"
+	"gopkg.in/iris.v4"
+	"github.com/journeymidnight/yig-iam/helper"
+	"github.com/journeymidnight/yig-iam/log"
+	"github.com/journeymidnight/yig-iam/api"
+	"github.com/journeymidnight/yig-iam/db"
+	tokenMiddleware "github.com/journeymidnight/yig-iam/middleware/token"
 	"github.com/hsluoyz/casbin"
 )
 

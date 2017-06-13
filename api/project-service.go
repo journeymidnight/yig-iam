@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/kataras/iris"
-	"legitlab.letv.cn/yig/iam/helper"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
-	"legitlab.letv.cn/yig/iam/db"
+	"gopkg.in/iris.v4"
+	"github.com/journeymidnight/yig-iam/helper"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/db"
 )
 
 func AddProjectService(c *iris.Context, query QueryRequest)  {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"time"
-	"legitlab.letv.cn/yig/iam/helper"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/helper"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
 
 var Db *sql.DB

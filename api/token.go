@@ -1,11 +1,11 @@
 package api
 
 import (
-	"github.com/kataras/iris"
+	"gopkg.in/iris.v4"
 	"github.com/google/uuid"
-	"legitlab.letv.cn/yig/iam/helper"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
-	"legitlab.letv.cn/yig/iam/db"
+	"github.com/journeymidnight/yig-iam/helper"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/db"
 )
 
 func ConnectService(c *iris.Context, query QueryRequest) {

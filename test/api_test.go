@@ -2,8 +2,9 @@ package test
 import (
 	"testing"
 	"net/http"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
-	"github.com/bmizerany/assert"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
+//	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 	"encoding/json"
 	"github.com/bitly/go-simplejson"
 	"strings"

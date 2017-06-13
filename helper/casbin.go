@@ -2,7 +2,7 @@ package helper
 
 import (
 	"github.com/hsluoyz/casbin"
-	. "legitlab.letv.cn/yig/iam/api/datatype"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
 
 var Enforcer *casbin.Enforcer

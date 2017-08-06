@@ -1,5 +1,6 @@
 package test
 import (
+	"errors"
 	"testing"
 	"net/http"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
@@ -11,7 +12,6 @@ import (
 	"io/ioutil"
 	"fmt"
 )
-var root_token string
 var account_token string
 var user_token string
 var accountId string
@@ -25,42 +25,67 @@ const (
 	ACCOUNT_NAME = "15579423@qq.com"
 	ACCOUNT_PASSWORD = "123456"
 	SERVICE_NAME = "S3"
+	ROOTNAME = "root"
+	ROOTPASSWORD = "admin"
 )
 
-func Test_ConnectService(t *testing.T) {
+
+var BADPASSWORD = errors.New("bad username or password");
+
+func getToken(username, password string) (retCode int, token string, err error) {
+	retCode = 0
+	token = ""
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_ConnectService
-	query.UserName = "root"
-	query.Password = "admin"
+	query.UserName = username
+	query.Password = password
 	body, err := json.Marshal(query)
 	if err != nil {
-		t.Error("Test_ConnectService error", err)
+		return 
 	}
+
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
-		t.Error("Test_ConnectService error", err)
+		return 
 	}
-	if response.StatusCode != 200 {
-		t.Error("Test_ConnectService error", err)
-	}
-	res_body, err := ioutil.ReadAll(response.Body)
+
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		t.Error("Test_ConnectService error", err)
+		return
 	}
-	fmt.Println("res_body", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
-	retCode, err := js.Get("retCode").Int()
+	js, _ := simplejson.NewJson(resBody)
+
+	retCode, err = js.Get("retCode").Int()
 	if retCode != 0 {
-		t.Error("Test_ConnectService response not 0 :", retCode)
-	} else {
-		root_token, err = js.Get("data").Get("token").String()
-		assert.Equal(t, nil, err)
+		err = BADPASSWORD
+		return
 	}
+	token, err = js.Get("data").Get("token").String()
+	return
+}
+
+
+func Test_ConnectService_GoodPassword(t *testing.T) {
+	ret, token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 0, ret)
+	t.Logf("got root token successfully, token is %s \r\n" , token)
+}
+
+func Test_ConnectService_BadPassword(t *testing.T) {
+	ret, _, err := getToken(ROOTNAME, ROOTPASSWORD+"hehe")
+	assert.Equal(t, 4000, ret)
+	assert.Equal(t, BADPASSWORD, err)
 }
 
 func Test_CreateAccount(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_CreateAccount
@@ -79,19 +104,24 @@ func Test_CreateAccount(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_CreateAccount error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_CreateAccount error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
-		t.Error("Test_ConnectService response not 0 :", retCode)
+		t.Error("Test_CreateAccount response not 0 :", retCode)
 	}
 }
 
 func Test_ListAccounts(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_ListAccounts
@@ -108,18 +138,18 @@ func Test_ListAccounts(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, err := simplejson.NewJson(res_body)
+	js, err := simplejson.NewJson(resBody)
 	assert.NotEqual(t, nil, js)
 	assert.Equal(t, nil, err)
 	retCode, err := js.Get("retCode").Int()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 0, retCode)
-	fmt.Println("response", string(res_body))
+	fmt.Println("response", string(resBody))
 	accountId, err = js.Get("data").GetIndex(0).Get("AccountId").String()
 	assert.NotEqual(t, nil, accountId)
 	fmt.Println("accountId=", accountId)
@@ -127,6 +157,11 @@ func Test_ListAccounts(t *testing.T) {
 }
 
 func Test_DescribeAccount(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_DescribeAccount
@@ -144,12 +179,12 @@ func Test_DescribeAccount(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("RetCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -180,12 +215,12 @@ func Test_AccountLogin(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ConnectService error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ConnectService response not 0 :", retCode)
@@ -217,12 +252,12 @@ func Test_CreateUser(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_CreateUser error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_CreateUser error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_CreateUser response not 0 :", retCode)
@@ -249,12 +284,12 @@ func Test_UserLogin(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ConnectService error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ConnectService response not 0 :", retCode)
@@ -265,7 +300,7 @@ func Test_UserLogin(t *testing.T) {
 		}
 	}
 
-	fmt.Println("user login success", string(res_body))
+	fmt.Println("user login success", string(resBody))
 }
 
 func Test_DescribeUser_From_User(t *testing.T) {
@@ -285,15 +320,15 @@ func Test_DescribeUser_From_User(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	assert.Equal(t, 0, retCode)
-	fmt.Println("user describe user success", string(res_body))
+	fmt.Println("user describe user success", string(resBody))
 }
 
 func Test_DescribeUser_From_Account(t *testing.T) {
@@ -314,12 +349,12 @@ func Test_DescribeUser_From_Account(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -344,12 +379,12 @@ func Test_ListUsers(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -381,12 +416,12 @@ func Test_CreateProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_CreateProject error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_CreateProject error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_CreateProject response not 0 :", retCode)
@@ -412,12 +447,12 @@ func Test_ListProjects(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -446,12 +481,12 @@ func Test_DescribeProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -480,12 +515,12 @@ func Test_LinkUserWithProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -510,12 +545,12 @@ func Test_ListProjectByUser_USER_TOKEN(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -544,12 +579,12 @@ func Test_ListProjectByUser_ACCCOUNT_TOKEN(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -578,12 +613,12 @@ func Test_ListUserByProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -613,12 +648,12 @@ func Test_AddProjectService(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -644,12 +679,12 @@ func Test_ListServiceByProject_ACCOUNT_TOKEN(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -678,12 +713,12 @@ func Test_ListServiceByProject_USER_TOKEN(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -713,12 +748,12 @@ func Test_CreateAccessKey(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -744,12 +779,12 @@ func Test_ListAccessKeysByProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -778,12 +813,12 @@ func Test_DescribeAccessKeys(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -813,12 +848,12 @@ func Test_DeleteAccessKey(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -846,12 +881,12 @@ func Test_DelProjectService(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -876,12 +911,12 @@ func Test_UnLinkUserWithProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body=", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody=", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -907,12 +942,12 @@ func Test_DeleteProject(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -939,12 +974,12 @@ func Test_DeleteUser(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
 
-	js, _ := simplejson.NewJson(res_body)
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
@@ -953,6 +988,11 @@ func Test_DeleteUser(t *testing.T) {
 }
 
 func Test_DeleteAccount(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_DeleteAccount
@@ -970,12 +1010,12 @@ func Test_DeleteAccount(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Error("Test_ListAccounts error", err)
 	}
-	res_body, err := ioutil.ReadAll(response.Body)
+	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	fmt.Println("res_body", string(res_body))
-	js, _ := simplejson.NewJson(res_body)
+	fmt.Println("resBody", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)

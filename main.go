@@ -14,6 +14,8 @@ import (
 	"github.com/journeymidnight/yig-iam/db"
 	tokenMiddleware "github.com/journeymidnight/yig-iam/middleware/token"
 	"github.com/hsluoyz/casbin"
+	"github.com/casbin/xorm-adapter"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var logger *log.Logger
@@ -45,7 +47,9 @@ func main() {
 	logger = log.New(f, "[yig]", log.LstdFlags, helper.CONFIG.LogLevel)
 	helper.Logger = logger
 	fmt.Println(5, "enter 0:")
-	helper.Enforcer = casbin.NewEnforcer("./config/casbin.conf")
+
+	a := xormadapter.NewAdapter("mysql", "root:12345678@tcp(127.0.0.1:3306)/")
+	helper.Enforcer = casbin.NewEnforcer("./config/basic_model.conf", a)
 	helper.Enforcer.LoadPolicy()
 	roles := helper.Enforcer.GetAllRoles()
 	fmt.Println(5, "enter 1:", len(roles))

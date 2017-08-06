@@ -1,9 +1,9 @@
 #Prepare
 ####安装mysql 
 
-设置root 123456 
+设置root 12345678
 
-mysql -u root -p123456
+mysql -u root -p12345678
 
 创建db iam
 

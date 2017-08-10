@@ -21,6 +21,12 @@ func ConnectService(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"user name or password incorrect",Data:""})
 		return
 	}
+
+	if record.Status == "inactive" {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"your account has been disabled by administrator",Data:""})
+		return
+	}
+
 	uuid := uuid.New()
 	helper.Logger.Println(5, "ConnectService uuid length:", len(uuid.String()))
 	err = db.InsertTokenRecord(uuid.String(), record.UserName, record.AccountId, record.Type)

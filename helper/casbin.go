@@ -10,6 +10,8 @@ var Enforcer *casbin.Enforcer
 func Casbin_init () {
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateAccount, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteAccount, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeactivateAccount, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ActivateAccount, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DescribeAccount, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ListAccounts, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_ListUsers, "ACCESS"})

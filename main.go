@@ -53,17 +53,17 @@ func main() {
 	helper.Enforcer.LoadPolicy()
 	roles := helper.Enforcer.GetAllRoles()
 	fmt.Println(5, "enter 1:", len(roles))
-	if len(roles) == 0 {
-		logger.Println(5, "roles number:", len(roles))
+	//if len(roles) == 0 {
+	//	logger.Println(5, "roles number:", len(roles))
 		helper.Casbin_init()
-	}
+	//}
 	/* redirect stdout stderr to log  */
 	syscall.Dup2(int(f.Fd()), 2)
 	syscall.Dup2(int(f.Fd()), 1)
 	db.Db = db.CreateDbConnection()
 	defer db.Db.Close()
 	tokenMiddleware := tokenMiddleware.New()
-	iris.Post("/", tokenMiddleware.Serve, api.ApiHandle)
+	iris.Post("/iamapi", tokenMiddleware.Serve, api.ApiHandle)
 	iris.Listen(":"+strconv.Itoa(helper.CONFIG.BindPort))
 }
 

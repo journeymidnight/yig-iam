@@ -56,6 +56,16 @@ func DescribeAccount(AccountId string) (UserRecord, error) {
 	return record, err
 }
 
+func DeactivateAccount(AccountId string) (error) {
+	_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
+	return err
+}
+
+func ActivateAccount(AccountId string) (error) {
+	_, err := Db.Exec("update User set status='active' where accountId=(?) and type='ACCOUNT'", AccountId)
+	return err
+}
+
 func ListAccountRecords() ([]UserRecord, error) {
 	var records []UserRecord
 	rows, err := Db.Query("select * from User where type=(?)", ROLE_ACCOUNT)

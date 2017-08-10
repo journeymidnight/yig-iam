@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"encoding/json"
 	"github.com/bitly/go-simplejson"
+    "github.com/google/uuid"
 	"strings"
 	"io/ioutil"
 	"fmt"
@@ -80,7 +81,7 @@ func Test_ConnectService_BadPassword(t *testing.T) {
 	assert.Equal(t, BADPASSWORD, err)
 }
 
-func Test_Create1000Accounts(t *testing.T) {
+func Test_Create10Accounts(t *testing.T) {
 	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
 	if err != nil {
 		t.Error("Test_CreateAccount error, failed to get root token")
@@ -91,9 +92,10 @@ func Test_Create1000Accounts(t *testing.T) {
 	query.Action = ACTION_CreateAccount
 	query.Token = root_token
 
-    for i:=0; i< 1000; i++ {
-	    query.UserName = ACCOUNT_NAME + string(i)
+    for i:=0; i< 10; i++ {
+	    query.UserName = ACCOUNT_NAME + strings.Split(uuid.New().String(), "-")[0]
 	    query.Password = ACCOUNT_PASSWORD
+	    query.Email = ACCOUNT_NAME
 	    body, err := json.Marshal(query)
 	    if err != nil {
 	    	t.Error("Test_CreateAccount error", err)
@@ -115,6 +117,7 @@ func Test_Create1000Accounts(t *testing.T) {
 	    retCode, err := js.Get("retCode").Int()
 	    if retCode != 0 {
 	    	t.Error("Test_CreateAccount response not 0 :", retCode)
+            t.Error(string(resBody))
 	    }
     }
 }
@@ -1097,5 +1100,40 @@ func Test_DeleteAccount(t *testing.T) {
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
 		t.Error("Test_ListAccounts response not 0 :", retCode)
+	}
+}
+
+func Test_DeactivateAccount(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
+	client := &http.Client{}
+	var query QueryRequest
+	query.Action = ACTION_DeactivateAccount
+	query.Token = root_token
+	query.AccountId = "2139039578296960"
+	body, err := json.Marshal(query)
+	if err != nil {
+		t.Error("Test_ListAccounts error", err)
+	}
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
+	response, err := client.Do(req)
+	if err != nil {
+		t.Error("Test_DeactivateAccount error", err)
+	}
+	if response.StatusCode != 200 {
+		t.Error("Test_DeactivateAccount error", err)
+	}
+	resBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		t.Error("Test_DeactivateAccount error", err)
+	}
+	fmt.Println("resBody", string(resBody))
+	js, _ := simplejson.NewJson(resBody)
+	retCode, err := js.Get("retCode").Int()
+	if retCode != 0 {
+		t.Error("Test_DeactivateAccount response not 0 :", retCode)
 	}
 }

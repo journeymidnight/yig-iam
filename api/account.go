@@ -71,6 +71,38 @@ func DeleteAccount(c *iris.Context, query QueryRequest)  {
 	return
 }
 
+func DeactivateAccount(c *iris.Context, query QueryRequest) {
+	tokenRecord := c.Get("token").(TokenRecord)
+	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeactivateAccount, ACT_ACCESS) != true {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+		return
+	}
+	err := db.DeactivateAccount(query.AccountId)
+	if err != nil {
+		helper.Logger.Println(5, "failed deactivate account: ", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed to deactivate account, maybe user doesnot exist or deactivate failed",Data:query})
+		return
+	}
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	return
+}
+
+func ActivateAccount(c *iris.Context, query QueryRequest) {
+	tokenRecord := c.Get("token").(TokenRecord)
+	if helper.Enforcer.Enforce(tokenRecord.UserName, API_ActivateAccount, ACT_ACCESS) != true {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+		return
+	}
+	err := db.ActivateAccount(query.AccountId)
+	if err != nil {
+		helper.Logger.Println(5, "failed deactivate account: ", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed to activate account, maybe user doesnot exist or deactivate failed",Data:query})
+		return
+	}
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	return
+}
+
 func DescribeAccount(c *iris.Context, query QueryRequest) {
 	tokenRecord := c.Get("token").(TokenRecord)
 	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DescribeAccount, ACT_ACCESS) != true {

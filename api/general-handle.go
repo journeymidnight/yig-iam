@@ -16,6 +16,11 @@ func ApiHandle(c *iris.Context) {
 		DeleteAccount(c, query)
 	case ACTION_DescribeAccount:
 		DescribeAccount(c, query)
+	case ACTION_DeactivateAccount:
+		DeactivateAccount(c, query)
+
+	case ACTION_ActivateAccount:
+		ActivateAccount(c, query)
 	case ACTION_ListAccounts:
 		ListAccounts(c, query)
 	case ACTION_ListUsers:

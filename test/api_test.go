@@ -45,7 +45,7 @@ func getToken(username, password string) (retCode int, token string, err error) 
 		return 
 	}
 
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		return 
@@ -80,6 +80,84 @@ func Test_ConnectService_BadPassword(t *testing.T) {
 	assert.Equal(t, BADPASSWORD, err)
 }
 
+func Test_Create1000Accounts(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
+	client := &http.Client{}
+	var query QueryRequest
+	query.Action = ACTION_CreateAccount
+	query.Token = root_token
+
+    for i:=0; i< 1000; i++ {
+	    query.UserName = ACCOUNT_NAME + string(i)
+	    query.Password = ACCOUNT_PASSWORD
+	    body, err := json.Marshal(query)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
+	    response, err := client.Do(req)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    if response.StatusCode != 200 {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    resBody, err := ioutil.ReadAll(response.Body)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+
+	    js, _ := simplejson.NewJson(resBody)
+	    retCode, err := js.Get("retCode").Int()
+	    if retCode != 0 {
+	    	t.Error("Test_CreateAccount response not 0 :", retCode)
+	    }
+    }
+}
+
+func Test_Delete1000Accounts(t *testing.T) {
+	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
+	if err != nil {
+		t.Error("Test_CreateAccount error, failed to get root token")
+	}
+
+	client := &http.Client{}
+	var query QueryRequest
+	query.Action = ACTION_DeleteAccount
+	query.Token = root_token
+
+    for i:=0; i< 1000; i++ {
+	    query.UserName = ACCOUNT_NAME + string(i)
+	    query.Password = ACCOUNT_PASSWORD
+	    body, err := json.Marshal(query)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
+	    response, err := client.Do(req)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    if response.StatusCode != 200 {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+	    resBody, err := ioutil.ReadAll(response.Body)
+	    if err != nil {
+	    	t.Error("Test_CreateAccount error", err)
+	    }
+
+	    js, _ := simplejson.NewJson(resBody)
+	    retCode, err := js.Get("retCode").Int()
+	    if retCode != 0 {
+	    	t.Error("Test_CreateAccount response not 0 :", retCode)
+	    }
+    }
+}
+
 func Test_CreateAccount(t *testing.T) {
 	_, root_token, err := getToken(ROOTNAME, ROOTPASSWORD)
 	if err != nil {
@@ -96,7 +174,7 @@ func Test_CreateAccount(t *testing.T) {
 	if err != nil {
 		t.Error("Test_CreateAccount error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_CreateAccount error", err)
@@ -130,7 +208,7 @@ func Test_ListAccounts(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -171,7 +249,7 @@ func Test_DescribeAccount(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -207,7 +285,7 @@ func Test_AccountLogin(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
@@ -244,7 +322,7 @@ func Test_CreateUser(t *testing.T) {
 	if err != nil {
 		t.Error("Test_CreateUser error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_CreateUser error", err)
@@ -276,7 +354,7 @@ func Test_UserLogin(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ConnectService error", err)
@@ -312,7 +390,7 @@ func Test_DescribeUser_From_User(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -341,7 +419,7 @@ func Test_DescribeUser_From_Account(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -371,7 +449,7 @@ func Test_ListUsers(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -407,7 +485,7 @@ func Test_CreateProject(t *testing.T) {
 		t.Error("Test_CreateProject error", err)
 	}
 	fmt.Println("Test_CreateProject body:", string(body))
-	req, err := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, err := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	assert.Equal(t, nil, err)
 	response, err := client.Do(req)
 	if err != nil {
@@ -439,7 +517,7 @@ func Test_ListProjects(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -473,7 +551,7 @@ func Test_DescribeProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -507,7 +585,7 @@ func Test_LinkUserWithProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -537,7 +615,7 @@ func Test_ListProjectByUser_USER_TOKEN(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -571,7 +649,7 @@ func Test_ListProjectByUser_ACCCOUNT_TOKEN(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -605,7 +683,7 @@ func Test_ListUserByProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -640,7 +718,7 @@ func Test_AddProjectService(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -671,7 +749,7 @@ func Test_ListServiceByProject_ACCOUNT_TOKEN(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -705,7 +783,7 @@ func Test_ListServiceByProject_USER_TOKEN(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -740,7 +818,7 @@ func Test_CreateAccessKey(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -771,7 +849,7 @@ func Test_ListAccessKeysByProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -803,7 +881,7 @@ func Test_DescribeAccessKeys(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	req.Header.Set("X-Le-Key", "key")
 	req.Header.Set("X-Le-Secret", "secret")
 	response, err := client.Do(req)
@@ -840,7 +918,7 @@ func Test_DeleteAccessKey(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -873,7 +951,7 @@ func Test_DelProjectService(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -903,7 +981,7 @@ func Test_UnLinkUserWithProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -934,7 +1012,7 @@ func Test_DeleteProject(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -966,7 +1044,7 @@ func Test_DeleteUser(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -1002,7 +1080,7 @@ func Test_DeleteAccount(t *testing.T) {
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
 	}
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/", strings.NewReader(string(body)))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)

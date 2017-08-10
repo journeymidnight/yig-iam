@@ -52,6 +52,7 @@ func DescribeAccount(AccountId string) (UserRecord, error) {
 		&record.Status,
 		&record.Created,
 		&record.Updated)
+	record.Password = ""
 	return record, err
 }
 
@@ -78,6 +79,7 @@ func ListAccountRecords() ([]UserRecord, error) {
 			helper.Logger.Println(5, "Row scan error: ", err)
 			continue
 		}
+		record.Password = ""
 		records = append(records, record)
 	}
 	if err := rows.Err(); err != nil {
@@ -119,6 +121,7 @@ func DescribeUserRecord(userName string, accountId string) (UserRecord, error) {
 		&record.Status,
 		&record.Created,
 		&record.Updated)
+	record.Password = ""
 	return record, err
 }
 
@@ -134,6 +137,7 @@ func ValidUserAndPassword(userName string, password string) (UserRecord, error) 
 		&record.Status,
 		&record.Created,
 		&record.Updated)
+	record.Password = ""
 	return record, err
 }
 
@@ -160,6 +164,7 @@ func ListUserRecords(accountId string) ([]UserRecord, error) {
 			helper.Logger.Println(5, "Row scan error: ", err)
 			continue
 		}
+		record.Password = ""
 		records = append(records, record)
 	}
 	if err := rows.Err(); err != nil {

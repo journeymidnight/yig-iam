@@ -4,7 +4,8 @@ import (
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
 func EnvHandler(c *iris.Context) {
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:"{appName: manager}"})
+	app := struct {AppName string} {AppName: "object storage system manager"}
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0, Message:"", Data: app})
 }
 
 func ApiHandle(c *iris.Context) {

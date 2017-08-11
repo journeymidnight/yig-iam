@@ -135,6 +135,22 @@ func DescribeUserRecord(userName string, accountId string) (UserRecord, error) {
 	return record, err
 }
 
+func ValidEmailAndPassword(email, password string) (UserRecord, error) {
+	var record UserRecord
+	err := Db.QueryRow("select * from User where email=(?) and password=(?)", email, password).Scan(
+		&record.UserName,
+		&record.Password,
+		&record.Type,
+		&record.Email,
+		&record.DisplayName,
+		&record.AccountId,
+		&record.Status,
+		&record.Created,
+		&record.Updated)
+	record.Password = ""
+	return record, err
+}
+
 func ValidUserAndPassword(userName string, password string) (UserRecord, error) {
 	var record UserRecord
 	err := Db.QueryRow("select * from User where userName=(?) and password=(?)", userName, password).Scan(

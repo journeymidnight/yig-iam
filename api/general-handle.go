@@ -3,6 +3,9 @@ import (
 	"gopkg.in/iris.v4"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 )
+func EnvHandler(c *iris.Context) {
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:"{appName: manager}"})
+}
 
 func ApiHandle(c *iris.Context) {
 	query := c.Get("queryRequest").(QueryRequest)
@@ -18,7 +21,6 @@ func ApiHandle(c *iris.Context) {
 		DescribeAccount(c, query)
 	case ACTION_DeactivateAccount:
 		DeactivateAccount(c, query)
-
 	case ACTION_ActivateAccount:
 		ActivateAccount(c, query)
 	case ACTION_ListAccounts:

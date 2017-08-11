@@ -1,15 +1,15 @@
 grant all on iam.* to iam@"127.0.0.1" identified by "123456" with grant option;
 
 create table User(
-userName varchar(50) primary key,
-password varchar(20),
-type varchar(10),
-email varchar(50),
-displayName varchar(50),
+userName varchar(50) NOT NULL primary key,
+password varchar(20) NOT NULL, 
+type varchar(10) NOT NULL, 
+email varchar(50) NOT NULL unique,
+displayName varchar(50) ,
 accountId varchar(50),
 status varchar(10),
-created varchar(50),
-updated varchar(50)
+created varchar(50) NOT NULL ,
+updated varchar(50) NOT NULL
 )default charset=utf8;
 
 create table Project(

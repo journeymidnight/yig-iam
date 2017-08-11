@@ -18,8 +18,15 @@ func ConnectService(c *iris.Context, query QueryRequest) {
 	helper.Logger.Println(5, "ConnectService user password:", userName, query.Password)
 	record, err := db.ValidUserAndPassword(userName, query.Password)
 	if err != nil {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"user name or password incorrect",Data:""})
-		return
+		//retry auth by email
+		if query.Email != "" {
+			helper.Logger.Println(5, "ConnectService user email:", query.Email, query.Password)
+			record, err = db.ValidEmailAndPassword(query.Email, query.Password)
+			if err != nil {
+				c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"user name or password incorrect",Data:""})
+				return
+			}
+		}
 	}
 
 	if record.Status == "inactive" {

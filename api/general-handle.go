@@ -58,6 +58,8 @@ func ApiHandle(c *iris.Context) {
 		ListServiceByProject(c, query)
 	case ACTION_DescribeAccessKeys:
 		DescribeAccessKeys(c, query)
+	case ACTION_DescribeAccessKeysWithToken:
+		DescribeAccessKeysWithToken(c, query)
 	case ACTION_ListAccessKeysByProject:
 		ListAccessKeysByProject(c, query)
 	case ACTION_CreateAccessKey:

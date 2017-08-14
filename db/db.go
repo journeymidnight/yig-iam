@@ -410,11 +410,11 @@ func GetTokenRecord(Token string) (TokenRecord, error) {
 	return record, err
 }
 
-func InsertAkSkRecord(AccessKey string, SecretKey string, ProjectId string, AccountId string, KeyName string) error {
+func InsertAkSkRecord(AccessKey string, SecretKey string, ProjectId string, AccountId string, KeyName string, Description string) error {
 	created := time.Now().Format(TimeFormat)
-	_, err := Db.Exec("insert into AkSk values( ?, ?, ?, ?, ?, ? )", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created)
+	_, err := Db.Exec("insert into AkSk values( ?, ?, ?, ?, ?, ?, ?)", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description)
 	if err != nil {
-		helper.Logger.Println(5, "Error InsertAkSkRecord", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, err.Error())
+		helper.Logger.Println(5, "Error InsertAkSkRecord ", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description,err.Error())
 	}
 	return err
 }
@@ -427,7 +427,8 @@ func IfAKExisted(AccessKey string) bool {
 		&record.ProjectId,
 		&record.AccountId,
 		&record.KeyName,
-		&record.Created)
+		&record.Created,
+		&record.Description)
 	if err != nil {
 		return false
 	} else {
@@ -453,7 +454,7 @@ func ListAkSkRecordByProject(ProjectId string, AccountId string) ([]AkSkRecord, 
 	defer rows.Close()
 	for rows.Next() {
 		var record AkSkRecord
-		if err := rows.Scan(&record.AccessKey, &record.AccessSecret, &record.ProjectId, &record.AccountId, &record.KeyName, &record.Created); err != nil {
+		if err := rows.Scan(&record.AccessKey, &record.AccessSecret, &record.ProjectId, &record.AccountId, &record.KeyName, &record.Created, &record.Description); err != nil {
 			helper.Logger.Println(5, "Row scan error: ", err)
 			continue
 		}
@@ -477,7 +478,8 @@ func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
 			&record.ProjectId,
 			&record.AccountId,
 			&record.KeyName,
-			&record.Created)
+			&record.Created,
+			&record.Description)
 		if err != nil {
 			helper.Logger.Println(5, "GetKeysByAccessKeys err: ", err)
 			continue
@@ -488,7 +490,49 @@ func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
 		item.Name = record.KeyName
 		item.Status = "active"
 		item.Updated = record.Created
+		item.Description = record.Description
 		items = append(items, item)
+	}
+	return items, err
+}
+
+func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
+	var items []AccessKeyItem
+	var err error
+	var record AkSkRecord
+	var item AccessKeyItem
+	rows, err := Db.Query("select * from AkSk where accountid=(?)", accountid)
+	if err != nil {
+		helper.Logger.Println(5, "Error ListUserProjectRecordByUser: ", err)
+		return items, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(
+			&record.AccessKey,
+			&record.AccessSecret,
+			&record.ProjectId,
+			&record.AccountId,
+			&record.KeyName,
+			&record.Created,
+			&record.Description); err != nil {
+				helper.Logger.Println(5, "Row scan error: ", err)
+				continue
+			}
+
+			item.ProjectId = record.ProjectId
+			item.AccessKey = record.AccessKey
+			item.AccessSecret =  record.AccessSecret
+			item.Name = record.KeyName
+			item.Status = "active"
+			item.Updated = record.Created
+			item.Description = record.Description
+			items = append(items, item)
+	}	
+	if err := rows.Err(); err != nil {
+		helper.Logger.Println(5, "Row error: ", err)
 	}
 	return items, err
 }

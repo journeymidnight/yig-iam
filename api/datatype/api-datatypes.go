@@ -34,6 +34,7 @@ const (
 	API_ListServiceByProject = "ListServiceByProject"
 	API_DescribeAccessKeys = "DescribeAccessKeys" //priviate api for internal system such as yig
 	API_ListAccessKeysByProject = "ListAccessKeysByProject"
+	API_ListAccessKeysByProjectWithToken = "ListAccessKeysByProjectWithToken"
 	API_CreateAccessKey = "CreateAccessKey"
 	API_DeleteAccessKey = "DeleteAccessKey"
 )
@@ -62,6 +63,7 @@ const (
 	ACTION_DelProjectService = "DelProjectService"
 	ACTION_ListServiceByProject = "ListServiceByProject"
 	ACTION_DescribeAccessKeys = "DescribeAccessKeys" //priviate api for internal system such as yig
+	ACTION_DescribeAccessKeysWithToken = "DescribeAccessKeysWithToken" //priviate api for internal system such as yig
 	ACTION_ListAccessKeysByProject = "ListAccessKeysByProject"
 	ACTION_CreateAccessKey = "CreateAccessKey"
 	ACTION_DeleteAccessKey = "DeleteAccessKey"
@@ -104,6 +106,7 @@ type AccessKeyItem struct {
 	AccessSecret string `json:"accessSecret"`
 	Status       string `json:"status"`
 	Updated      string `json:"updated"`
+	Description  string `json:"description"`
 }
 
 type DescribeKeysResp struct {
@@ -169,6 +172,7 @@ type AkSkRecord struct {
 	AccountId string `json:"accountId"`
 	KeyName string `json:"keyName"`
 	Created  string `json:"created"`
+	Description string `json:"description"`
 }
 
 type TokenRecord struct {

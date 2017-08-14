@@ -814,30 +814,31 @@ func Test_CreateAccessKey(t *testing.T) {
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_CreateAccessKey
-	query.Token = account_token
-	query.ProjectId = projectId
-	query.KeyName = "hehe"
+	//query.Token = account_token
+	query.Token = "47a03ddc-8859-43d4-9d14-6c8a190edd3b"
+	query.KeyName = "hehe4"
+	query.Description = "my new project"
 	body, err := json.Marshal(query)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_CreateAccessKey error", err)
 	}
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
 	response, err := client.Do(req)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_CreateAccessKey error", err)
 	}
 	if response.StatusCode != 200 {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_CreateAccessKey error", err)
 	}
 	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_CreateAccessKey error", err)
 	}
 	fmt.Println("resBody=", string(resBody))
 	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
-		t.Error("Test_ListAccounts response not 0 :", retCode)
+		t.Error("Test_CreateAccessKey response not 0 :", retCode)
 	}
 	fmt.Println("create ak sk success")
 }
@@ -846,8 +847,8 @@ func Test_ListAccessKeysByProject(t *testing.T) {
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_ListAccessKeysByProject
-	query.Token = account_token
-	query.ProjectId = projectId
+	query.Token = "47a03ddc-8859-43d4-9d14-6c8a190edd3b"
+	query.ProjectId = "s3defaultproject"
 	body, err := json.Marshal(query)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)
@@ -875,38 +876,41 @@ func Test_ListAccessKeysByProject(t *testing.T) {
 	fmt.Println("list ak sk success", accessKey, accessSecret)
 }
 
-func Test_DescribeAccessKeys(t *testing.T) {
+func Test_DescribeAccessKeysWithToken(t *testing.T) {
 	client := &http.Client{}
 	var query QueryRequest
-	query.Action = ACTION_DescribeAccessKeys
-	query.AccessKeys = []string{accessKey}
+	query.Action = ACTION_DescribeAccessKeysWithToken
+	query.Token = "47a03ddc-8859-43d4-9d14-6c8a190edd3b"
+	//query.AccessKeys = []string{accessKey}
 	body, err := json.Marshal(query)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_DescribeAccessKeysWithToken error", err)
 	}
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:8888/iamapi", strings.NewReader(string(body)))
-	req.Header.Set("X-Le-Key", "key")
-	req.Header.Set("X-Le-Secret", "secret")
 	response, err := client.Do(req)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_DescribeAccessKeysWithToken error", err)
 	}
 	if response.StatusCode != 200 {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_DescribeAccessKeysWithToken error", err)
 	}
 	resBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		t.Error("Test_ListAccounts error", err)
+		t.Error("Test_DescribeAccessKeysWithToken error", err)
 	}
-	fmt.Println("resBody=", string(resBody))
+
 	js, _ := simplejson.NewJson(resBody)
 	retCode, err := js.Get("retCode").Int()
 	if retCode != 0 {
-		t.Error("Test_ListAccounts response not 0 :", retCode)
+		t.Error("Test_DescribeAccessKeysWithToken response not 0 :", retCode)
 	}
-	AccessKey, err := js.Get("data").Get("accessKeySet").GetIndex(0).Get("accessKey").String()
-	AccessSecret, err := js.Get("data").Get("accessKeySet").GetIndex(0).Get("accessSecret").String()
-	fmt.Println("list ak sk success", AccessKey, AccessSecret)
+
+	pairs, _ := js.Get("data").Get("accessKeySet").Array()
+	for index, value := range pairs {
+		//fmt.Printf("the %d pair is , ak is %s, sk is %s\r\n", index, (value.(map[string]interface{})["accessKey"]).(string), (value.(map[string]interface{})["AccessSecret"]).(string))
+		s := (value.(map[string]interface{})["accessKey"]).(string)
+		fmt.Println(index, s)
+	}
 }
 
 
@@ -914,9 +918,8 @@ func Test_DeleteAccessKey(t *testing.T) {
 	client := &http.Client{}
 	var query QueryRequest
 	query.Action = ACTION_DeleteAccessKey
-	query.Token = account_token
-	query.ProjectId = projectId
-	query.AccessKey = accessKey
+	query.Token = "47a03ddc-8859-43d4-9d14-6c8a190edd3b"
+	query.AccessKey = "M3M0DAB569GVWNCB1YJC"
 	body, err := json.Marshal(query)
 	if err != nil {
 		t.Error("Test_ListAccounts error", err)

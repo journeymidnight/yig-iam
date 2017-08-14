@@ -28,10 +28,15 @@ func CreateAccessKey(c *iris.Context, query QueryRequest) {
 		return
 	}
 	accessSecret := helper.GenerateRandomIdByLength(40)
-	err := db.InsertAkSkRecord(string(accessKey[:]), string(accessSecret[:]), query.ProjectId, tokenRecord.AccountId, query.KeyName)
+
+	if query.ProjectId == "" {
+		query.ProjectId = "s3defaultproject"
+	}
+
+	err := db.InsertAkSkRecord(string(accessKey[:]), string(accessSecret[:]), query.ProjectId, tokenRecord.AccountId, query.KeyName, query.Description)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateAccessKey for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed CreateAccessKey",Data:query})
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed CreateAccessKey, maybe you create two keys with same name",Data:query})
 		return
 	}
 	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
@@ -91,3 +96,24 @@ func DescribeAccessKeys(c *iris.Context, query QueryRequest) {
 	return
 }
 
+
+func DescribeAccessKeysWithToken(c *iris.Context, query QueryRequest) {
+	tokenRecord := c.Get("token").(TokenRecord)
+	if helper.Enforcer.Enforce(tokenRecord.UserName, ACTION_DescribeAccessKeysWithToken, ACT_ACCESS) != true {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+		return
+	}
+	var resp DescribeKeysResp
+	records, err := db.GetKeysByAccount(tokenRecord.AccountId)
+	if err != nil {
+		helper.Logger.Println(5, "failed DescribeProject for query:", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeProject",Data:query})
+		return
+	}
+	resp.AccessKeySet = records
+	resp.Limit = len(records)
+	resp.Offset = 0
+	resp.Total = resp.Limit
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
+	return
+}

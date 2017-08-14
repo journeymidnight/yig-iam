@@ -38,12 +38,14 @@ created varchar(50)
 )default charset=utf8;
 
 create table AkSk(
-accessKey varchar(20) primary key,
+accessKey varchar(20) unique,
 accessSecret varchar(40),
 projectId varchar(20),
 accountId varchar(50),
 name varchar(20),
-created varchar(50)
+created varchar(50),
+description varchar(50), 
+primary key (accountId, name)
 )default charset=utf8;
 
 create table Token(

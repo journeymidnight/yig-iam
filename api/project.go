@@ -62,14 +62,20 @@ func ListProjects(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
 		return
 	}
-	if tokenRecord.Type == ROLE_ACCOUNT {
+	if tokenRecord.Type == ROLE_ACCOUNT || tokenRecord.Type == ROLE_ROOT {
 		records, err := db.ListProjectRecords(tokenRecord.AccountId)
 		if err != nil {
 			helper.Logger.Println(5, "failed DescribeProject for query:", query)
 			c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeProject",Data:query})
 			return
 		}
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:records})
+
+		var resp ListProjectResp
+		resp.Projects = records
+		resp.Limit = 20
+		resp.Offset = 0
+		resp.Total = len(records)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
 	} else {
 
 	}

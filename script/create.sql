@@ -57,4 +57,4 @@ created varchar(50),
 expired varchar(50)
 )default charset=utf8;
 
-INSERT INTO User VALUES ("root", "admin", "ROOT", "", "", "", "", "", "");
+INSERT INTO User VALUES ("root", "admin", "ROOT", "root@root.com", "root", "u-root", "active", now(), now());

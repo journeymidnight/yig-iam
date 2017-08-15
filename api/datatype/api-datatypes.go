@@ -34,7 +34,7 @@ const (
 	API_ListServiceByProject = "ListServiceByProject"
 	API_DescribeAccessKeys = "DescribeAccessKeys" //priviate api for internal system such as yig
 	API_ListAccessKeysByProject = "ListAccessKeysByProject"
-	API_ListAccessKeysByProjectWithToken = "ListAccessKeysByProjectWithToken"
+	API_DescribeAccessKeysWithToken = "DescribeAccessKeysWithToken" //priviate api for internal system such as yig
 	API_CreateAccessKey = "CreateAccessKey"
 	API_DeleteAccessKey = "DeleteAccessKey"
 )
@@ -106,6 +106,7 @@ type AccessKeyItem struct {
 	AccessSecret string `json:"accessSecret"`
 	Status       string `json:"status"`
 	Updated      string `json:"updated"`
+	Created		 string `json:"created"`
 	Description  string `json:"description"`
 }
 
@@ -151,6 +152,14 @@ type ProjectRecord struct {
 	Created  string `json:"created"`
 	Updated  string `json:"updated"`
 }
+
+type ListProjectResp struct {
+	Limit        int             `json:"limit"`
+	Total        int             `json:"total"`
+	Offset       int             `json:"offset"`
+	Projects []ProjectRecord     `json:"projectSet"`
+}
+
 
 type UserProjectRecord struct {
 	UserName string `json:"userName"`

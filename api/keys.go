@@ -111,9 +111,9 @@ func DescribeAccessKeysWithToken(c *iris.Context, query QueryRequest) {
 		return
 	}
 	resp.AccessKeySet = records
-	resp.Limit = len(records)
+	resp.Limit = 20
 	resp.Offset = 0
-	resp.Total = resp.Limit
+	resp.Total = len(records)
 	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
 	return
 }

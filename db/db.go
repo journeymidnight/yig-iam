@@ -503,7 +503,7 @@ func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
 	var item AccessKeyItem
 	rows, err := Db.Query("select * from AkSk where accountid=(?)", accountid)
 	if err != nil {
-		helper.Logger.Println(5, "Error ListUserProjectRecordByUser: ", err)
+		helper.Logger.Println(5, "Error GetKeysByAccount: ", err)
 		return items, err
 	}
 
@@ -526,8 +526,9 @@ func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
 			item.AccessKey = record.AccessKey
 			item.AccessSecret =  record.AccessSecret
 			item.Name = record.KeyName
-			item.Status = "active"
+			item.Status = "active" //fixme
 			item.Updated = record.Created
+			item.Created = record.Created //fixme
 			item.Description = record.Description
 			items = append(items, item)
 	}	

@@ -64,6 +64,7 @@ func main() {
 	defer db.Db.Close()
 	tokenMiddleware := tokenMiddleware.New()
 	iris.Post("/iamapi", tokenMiddleware.Serve, api.ApiHandle)
+	iris.Post("/losapi", tokenMiddleware.Serve, api.LosApiHandler)
 	iris.Get("/env", api.EnvHandler)
 	iris.Listen(":"+strconv.Itoa(helper.CONFIG.BindPort))
 }

@@ -57,6 +57,7 @@ type Config struct {
 	DebugMode                  bool
 	LogLevel                   int  //1-20
 	TokenExpire                int  //second
+	AccessKey, SecretKey, S3Domain      string
 }
 
 type config struct {
@@ -70,6 +71,7 @@ type config struct {
 	DebugMode                  bool
 	LogLevel                   int  //1-20
 	TokenExpire                int  //second
+	AccessKey, SecretKey, S3Domain      string
 }
 
 var CONFIG Config
@@ -98,5 +100,8 @@ func SetupConfig() {
 	CONFIG.DebugMode = c.DebugMode
 	CONFIG.LogLevel = Ternary(c.LogLevel == 0, 5, c.LogLevel).(int)
 	CONFIG.TokenExpire = Ternary(c.TokenExpire == 0, 28800, c.TokenExpire).(int)
+	CONFIG.AccessKey= c.AccessKey
+	CONFIG.SecretKey = c.SecretKey
+	CONFIG.S3Domain = c.S3Domain
 }
 

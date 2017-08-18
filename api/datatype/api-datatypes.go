@@ -67,6 +67,13 @@ const (
 	ACTION_ListAccessKeysByProject = "ListAccessKeysByProject"
 	ACTION_CreateAccessKey = "CreateAccessKey"
 	ACTION_DeleteAccessKey = "DeleteAccessKey"
+	//losapis
+	ACTION_LOS_GETS3DOMAIN = "GetS3Domain"
+	ACTION_LOS_LISTBUCKETS = "ListBuckets"
+	ACTION_LOS_DELETEBUCKET = "DeleteBucket"
+	ACTION_LOS_GETBUCKETSTATS= "GetBucketStats"
+	ACTION_LOS_CREATEBUCKET = "CreateBucket"
+	ACTION_LOS_PUTCORS = "PutCors"
 )
 
 type QueryRequest struct{
@@ -89,6 +96,7 @@ type QueryRequest struct{
 	AccessKeys []string `json:"accessKeys,omitempty"`
 	Limit int `json:"limit,omitempty"`
 	Offset int `json:"offset,omitempty"`
+	Bucket string `json:"bucket,omitempty"`
 }
 
 type QueryRespAll struct {

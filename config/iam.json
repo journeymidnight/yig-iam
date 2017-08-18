@@ -8,5 +8,8 @@
     "DatabaseConnectionString": "root:12345678@/iam",
     "DebugMode": false,
     "LogLeval": 5,
-    "TokenExpire": 3600
+    "TokenExpire": 3600,
+    "S3Domain":"los-cn-north-1.lecloudapis.com",
+    "AccessKey":"R75LI9J8MG4WL78GVJ77",
+    "SecretKey":"uJK5EkXjN5JnfWKX5uub7DbUUWibATsaED7b4YG3"
 }

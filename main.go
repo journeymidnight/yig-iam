@@ -7,12 +7,14 @@ import (
 	"syscall"
 	//	"time"
 	//	"syscall"
-	"gopkg.in/iris.v4"
-	"github.com/journeymidnight/yig-iam/helper"
-	"github.com/journeymidnight/yig-iam/log"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/journeymidnight/yig-iam/api"
 	"github.com/journeymidnight/yig-iam/db"
+	"github.com/journeymidnight/yig-iam/helper"
+	"github.com/journeymidnight/yig-iam/log"
 	tokenMiddleware "github.com/journeymidnight/yig-iam/middleware/token"
+	"gopkg.in/iris.v4"
+	"github.com/casbin/xorm-adapter"
 	"github.com/hsluoyz/casbin"
 )
 
@@ -22,8 +24,8 @@ func main() {
 	fmt.Println(5, "enter 2:")
 	helper.SetupConfig()
 	fmt.Println(5, "enter 3:")
-	defer func(){
-		if err:=recover();err!=nil{
+	defer func() {
+		if err := recover(); err != nil {
 			fmt.Println(err) // 这里的err其实就是panic传入的内容，55
 		}
 	}()
@@ -45,7 +47,8 @@ func main() {
 	logger = log.New(f, "[yig]", log.LstdFlags, helper.CONFIG.LogLevel)
 	helper.Logger = logger
 	fmt.Println(5, "enter 0:")
-	helper.Enforcer = casbin.NewEnforcer("./config/casbin.conf")
+	a := xormadapter.NewAdapter("mysql", "root:12345678@tcp(127.0.0.1:3306)/")
+	helper.Enforcer = casbin.NewEnforcer("./config/basic_model.conf", a)
 	helper.Enforcer.LoadPolicy()
 	roles := helper.Enforcer.GetAllRoles()
 	fmt.Println(5, "enter 1:", len(roles))
@@ -60,6 +63,5 @@ func main() {
 	defer db.Db.Close()
 	tokenMiddleware := tokenMiddleware.New()
 	iris.Post("/", tokenMiddleware.Serve, api.ApiHandle)
-	iris.Listen(":"+strconv.Itoa(helper.CONFIG.BindPort))
+	iris.Listen(":" + strconv.Itoa(helper.CONFIG.BindPort))
 }
-

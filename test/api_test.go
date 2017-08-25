@@ -95,7 +95,7 @@ func Test_Create10Accounts(t *testing.T) {
     for i:=0; i< 10; i++ {
 	    query.UserName = ACCOUNT_NAME + strings.Split(uuid.New().String(), "-")[0]
 	    query.Password = ACCOUNT_PASSWORD
-	    query.Email = ACCOUNT_NAME
+	    query.Email = query.UserName
 	    body, err := json.Marshal(query)
 	    if err != nil {
 	    	t.Error("Test_CreateAccount error", err)

@@ -3,21 +3,23 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"time"
-	"github.com/journeymidnight/yig-iam/helper"
+
+	_ "github.com/go-sql-driver/mysql"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/helper"
 )
 
 var Db *sql.DB
 
 const (
-	User_TYPE_ADMIN	= 0
+	User_TYPE_ADMIN   = 0
 	User_TYPE_ACCOUNT = 1
-	User_TYPE_USER	= 2
+	User_TYPE_USER    = 2
 )
 
 const TimeFormat = "2006-01-02T15:04:05Z07:00"
+
 func CreateDbConnection() *sql.DB {
 	conn, err := sql.Open("mysql", helper.CONFIG.DatabaseConnectionString)
 	if err != nil {
@@ -31,6 +33,162 @@ func checkDbTables() {
 	return
 }
 
+// projectRole table
+func InsertProjectRoleRecord(projectId, userid string, role int) error {
+	created := time.Now().Format(TimeFormat)
+	_, err := Db.Exec("insert into ProjectUser values( null, ?, ?, ?, ?)", userid, projectId, role, created)
+	if err != nil {
+		helper.Logger.Println(5, "Error add ProjectRole", userid, projectId, role, created, err.Error())
+	}
+	return err
+}
+
+func ListProjectRoleRecordsByProjectId(projectid string) ([]ProjectRoleRecord, error) {
+	var records []ProjectRoleRecord
+	rows, err := Db.Query("select * from ProjectUser where project_id=(?)", projectid)
+	if err != nil {
+		helper.Logger.Println(5, "Error querying idle executors: ", err)
+		return records, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var record ProjectRoleRecord
+		var someid int
+		if err := rows.Scan(
+			&someid,
+			&record.UserId,
+			&record.ProjectId,
+			&record.Role,
+			&record.Created); err != nil {
+			helper.Logger.Println(5, "Row scan error: ", err)
+			continue
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		helper.Logger.Println(5, "Row error: ", err)
+	}
+	return records, err
+}
+
+func RemoveProjectRoleRecord(ProjectId string, AccountId string) error {
+	_, err := Db.Exec("delete from ProjectUser where project_id=(?) and user_id=(?)", ProjectId, AccountId)
+	if err != nil {
+		helper.Logger.Println(5, "Error remove projectuser", ProjectId, err.Error())
+	}
+	return err
+}
+func InsertRegionRecord(RegionId string, RegionName string) error {
+	status := "active"
+	created := time.Now().Format(TimeFormat)
+	updated := created
+	_, err := Db.Exec("insert into Region values( ?, ?, ?, ?, ?)", RegionId, RegionName, status, created, updated)
+	if err != nil {
+		helper.Logger.Println(5, "Error add region", RegionId, RegionName, status, created, updated, err.Error())
+	}
+	return err
+}
+
+func ListRegionRecords() ([]RegionRecord, error) {
+	var records []RegionRecord
+	rows, err := Db.Query("select * from Region")
+	if err != nil {
+		helper.Logger.Println(5, "Error querying idle executors: ", err)
+		return records, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var record RegionRecord
+		if err := rows.Scan(
+			&record.RegionId,
+			&record.RegionName,
+			&record.Status,
+			&record.Created,
+			&record.Updated); err != nil {
+			helper.Logger.Println(5, "Row scan error: ", err)
+			continue
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		helper.Logger.Println(5, "Row error: ", err)
+	}
+	return records, err
+}
+
+func UpdateRegionRecord(id, name string) error {
+	updated := time.Now().Format(TimeFormat)
+	_, err := Db.Exec("update Region set regionName=(?), updated=(?) where regionId=(?)", name, id, updated)
+	if err != nil {
+		helper.Logger.Println(5, "Error modify project", id, err.Error())
+	}
+	return err
+}
+
+func RemoveRegionRecord(id string) error {
+	_, err := Db.Exec("delete from Region where regionId=(?)", id)
+	if err != nil {
+		helper.Logger.Println(5, "Error remove region", id, err.Error())
+	}
+
+	return err
+}
+
+func InsertServiceRecord(serviceid, url, endpoint, regionId string) error {
+	created := time.Now().Format(TimeFormat)
+	updated := created
+	_, err := Db.Exec("insert into Service values( ?, ?, ?, ?, ?)", serviceid, created, updated, regionId, endpoint)
+	if err != nil {
+		helper.Logger.Println(5, "Error add service", serviceid, created, updated, regionId, endpoint, err.Error())
+	}
+	return err
+}
+
+func ListSerivceRecords() ([]ServiceRecord, error) {
+	var records []ServiceRecord
+	rows, err := Db.Query("select * from Service")
+	if err != nil {
+		helper.Logger.Println(5, "Error querying idle executors: ", err)
+		return records, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var record ServiceRecord
+		if err := rows.Scan(
+			&record.ServiceId,
+			&record.Created,
+			&record.Updated,
+			&record.RegionId,
+			&record.Endpoint); err != nil {
+			helper.Logger.Println(5, "Row scan error: ", err)
+			continue
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		helper.Logger.Println(5, "Row error: ", err)
+	}
+	return records, err
+}
+
+func UpdateServiceRecord(id, endpoint string) error {
+	updated := time.Now().Format(TimeFormat)
+	_, err := Db.Exec("update Service set Endpoint=(?), updated=(?) where serviceId=(?)", endpoint, updated, id)
+	if err != nil {
+		helper.Logger.Println(5, "Error modify service", id, err.Error())
+	}
+	return err
+}
+
+func RemoveServiceRecord(id string) error {
+	_, err := Db.Exec("delete from Service where serviceId=(?)", id)
+	if err != nil {
+		helper.Logger.Println(5, "Error remove service", id, err.Error())
+	}
+
+	return err
+}
+
 func RemoveAccountId(AccountId string) error {
 	_, err := Db.Exec("delete from User where accountId=(?) and type='ACCOUNT'", AccountId)
 	if err != nil {
@@ -42,7 +200,7 @@ func RemoveAccountId(AccountId string) error {
 
 func DescribeAccount(AccountId string) (UserRecord, error) {
 	var record UserRecord
-	 err := Db.QueryRow("select * from User where accountId=(?) and type='ACCOUNT'", AccountId).Scan(
+	err := Db.QueryRow("select * from User where accountId=(?) and type='ACCOUNT'", AccountId).Scan(
 		&record.UserName,
 		&record.Password,
 		&record.Type,
@@ -56,12 +214,12 @@ func DescribeAccount(AccountId string) (UserRecord, error) {
 	return record, err
 }
 
-func DeactivateAccount(AccountId string) (error) {
+func DeactivateAccount(AccountId string) error {
 	_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
 	return err
 }
 
-func ActivateAccount(AccountId string) (error) {
+func ActivateAccount(AccountId string) error {
 	_, err := Db.Exec("update User set status='active' where accountId=(?) and type='ACCOUNT'", AccountId)
 	return err
 }
@@ -99,7 +257,7 @@ func ListAccountRecords() ([]UserRecord, error) {
 }
 
 func InsertUserRecord(userName string, password string, accountType string,
-			email string, displayName string, accountId string) error {
+	email string, displayName string, accountId string) error {
 	status := "active"
 	created := time.Now().Format(TimeFormat)
 	updated := created
@@ -214,6 +372,15 @@ func RemoveProjectRecord(ProjectId string, AccountId string) error {
 	_, err := Db.Exec("delete from Project where projectId=(?) and accountId=(?)", ProjectId, AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "Error remove user", ProjectId, err.Error())
+	}
+	return err
+}
+
+func UpdateProjectRecord(ProjectId, ProjectName, Description string) error {
+	updated := time.Now().Format(TimeFormat)
+	_, err := Db.Exec("update Project set projectName=(?), description=(?), updated=(?) where projectId=(?)", ProjectName, Description, updated, ProjectId)
+	if err != nil {
+		helper.Logger.Println(5, "Error modify project", ProjectId, err.Error())
 	}
 	return err
 }
@@ -391,7 +558,7 @@ func CheckUserExist(UserName string) (bool, error) {
 
 func InsertTokenRecord(Token string, UserName string, AccountId string, Type string) error {
 	created := time.Now().Format(TimeFormat)
-	expired := time.Now().Add(time.Duration(helper.CONFIG.TokenExpire*1000000000)).Format(TimeFormat)
+	expired := time.Now().Add(time.Duration(helper.CONFIG.TokenExpire * 1000000000)).Format(TimeFormat)
 	_, err := Db.Exec("insert into Token values( ?, ?, ?, ?, ?, ? )", Token, UserName, AccountId, Type, created, expired)
 	if err != nil {
 		helper.Logger.Println(5, "Error InsertTokenRecord", Token, UserName, AccountId, Type, created, expired, err.Error())
@@ -414,7 +581,7 @@ func InsertAkSkRecord(AccessKey string, SecretKey string, ProjectId string, Acco
 	created := time.Now().Format(TimeFormat)
 	_, err := Db.Exec("insert into AkSk values( ?, ?, ?, ?, ?, ?, ?)", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description)
 	if err != nil {
-		helper.Logger.Println(5, "Error InsertAkSkRecord ", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description,err.Error())
+		helper.Logger.Println(5, "Error InsertAkSkRecord ", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description, err.Error())
 	}
 	return err
 }
@@ -434,6 +601,20 @@ func IfAKExisted(AccessKey string) bool {
 	} else {
 		return true
 	}
+}
+
+func GetSkAndProjectByAk(AccessKey string) (sk, pid string, err error) {
+	var record AkSkRecord
+	err = Db.QueryRow("select * from aksk where accessKey=(?)", AccessKey).Scan(
+		&record.AccessKey,
+		&record.AccessSecret,
+		&record.ProjectId,
+		&record.AccountId,
+		&record.KeyName,
+		&record.Created,
+		&record.Description)
+
+	return record.AccessSecret, record.ProjectId, err
 }
 
 func RemoveAkSkRecord(AccessKey string, AccountId string) error {
@@ -486,7 +667,7 @@ func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
 		}
 		item.ProjectId = record.ProjectId
 		item.AccessKey = record.AccessKey
-		item.AccessSecret =  record.AccessSecret
+		item.AccessSecret = record.AccessSecret
 		item.Name = record.KeyName
 		item.Status = "active"
 		item.Updated = record.Created
@@ -518,20 +699,20 @@ func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
 			&record.KeyName,
 			&record.Created,
 			&record.Description); err != nil {
-				helper.Logger.Println(5, "Row scan error: ", err)
-				continue
-			}
+			helper.Logger.Println(5, "Row scan error: ", err)
+			continue
+		}
 
-			item.ProjectId = record.ProjectId
-			item.AccessKey = record.AccessKey
-			item.AccessSecret =  record.AccessSecret
-			item.Name = record.KeyName
-			item.Status = "active" //fixme
-			item.Updated = record.Created
-			item.Created = record.Created //fixme
-			item.Description = record.Description
-			items = append(items, item)
-	}	
+		item.ProjectId = record.ProjectId
+		item.AccessKey = record.AccessKey
+		item.AccessSecret = record.AccessSecret
+		item.Name = record.KeyName
+		item.Status = "active" //fixme
+		item.Updated = record.Created
+		item.Created = record.Created //fixme
+		item.Description = record.Description
+		items = append(items, item)
+	}
 	if err := rows.Err(); err != nil {
 		helper.Logger.Println(5, "Row error: ", err)
 	}

@@ -1,9 +1,12 @@
 package api
 
 import (
-	"log"
+	"os"
+	"fmt"
+	"io"
 	"crypto/md5"
 	"time"
+	"errors"
 	"strings"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +18,6 @@ import (
 )
 
 
-var slog  *log.Logger
 var minioClient *minio.Client
 
 type GetS3Domain struct {
@@ -97,8 +99,14 @@ func deleteBucket(c *iris.Context, query QueryRequest) {
 }
 
 func getBucketStats(c *iris.Context, query QueryRequest) {
+	if query.Bucket == "" {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"please provide a bucketname", Data:""})
+		return
+	}
+
 	Client := &http.Client{Timeout: time.Second * 5}
-	url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False" +"uid=" + query.ProjectId
+	//url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False" +"uid=" + query.ProjectId
+	url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False" +"uid=" + "p-CbBGTC6aPQ" //query.ProjectId
 	method := "GET"
 
 //	slog.Println("new request to s3:" + url)
@@ -124,7 +132,7 @@ func getBucketStats(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:err.Error(),Data:""})
 		return
 	}
-//	slog.Println(response.StatusCode)
+
 	if response.StatusCode != 200 {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"getUsageByNow response.StatusCode != 200", Data:""})
 		return
@@ -143,7 +151,7 @@ func createBucket(c *iris.Context, query QueryRequest) {
 	}
 	client, err := minio.NewV2(helper.CONFIG.S3Domain, ak, sk, false)
 	if err != nil {
-		slog.Fatalln(err)
+		helper.Logger.Fatalln(0, err)
 	}
 	err = client.MakeBucket(query.Bucket, "")
 	if err != nil {
@@ -210,4 +218,70 @@ func putCors(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"Unknown Error",Data:""})
 	}
 	return
+}
+
+
+func s3CreateKey(uid, accessKey, secretKey string) error {
+	Client := &http.Client{Timeout: time.Second * 5}
+	url := "http://" + helper.CONFIG.S3Domain + "/admin/user?format=json&uid=" + uid +"&display-name=" + uid +
+		"&access-key=" + accessKey + "&secret-key=" + secretKey
+	method := "PUT"
+
+	helper.Logger.Println(5, "new request to s3:" + url)
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		helper.Logger.Println(5, err.Error())
+		return err
+	}
+	request_p := helper.SignV2(*request, helper.CONFIG.AccessKey, helper.CONFIG.SecretKey)
+	response, err := Client.Do(request_p)
+	if err != nil {
+		helper.Logger.Println(5, err.Error())
+		return err
+	}
+	defer response.Body.Close()
+//	stdout := os.Stdout
+//	_, err = io.Copy(stdout, response.Body)
+	helper.Logger.Println(5, response.StatusCode)
+	if response.StatusCode != 200 {
+		return errors.New("create key return code not 200")
+	}
+	return nil
+}
+
+func s3DeleteKey(uid, accessKey, secretKey string) error {
+	Client := &http.Client{Timeout: time.Second * 5}
+	url := "http://" + helper.CONFIG.S3Domain + "/admin/user?key&format=json&uid=" + uid +
+		"&access-key=" + accessKey + "&secret-key=" + secretKey
+	method := "DELETE"
+
+	helper.Logger.Println(5, "new request to s3:" + url)
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		helper.Logger.Println(5, err.Error())
+		return err
+	}
+	request_p := helper.SignV2(*request, helper.CONFIG.AccessKey, helper.CONFIG.SecretKey)
+	response, err := Client.Do(request_p)
+	if err != nil {
+		helper.Logger.Println(5, err.Error())
+		return err
+	}
+	defer response.Body.Close()
+	stdout := os.Stdout
+	_, err = io.Copy(stdout, response.Body)
+	if err != nil {
+		helper.Logger.Println(5, err.Error())
+		return err
+	}
+	helper.Logger.Println(5, response.StatusCode)
+	if response.StatusCode != 200 {
+		if response.StatusCode == 403 {
+			return fmt.Errorf("InvalidAccessKeyId")
+		} else {
+			return fmt.Errorf("return code not 204")
+		}
+	}
+	return nil
+
 }

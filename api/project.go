@@ -24,6 +24,23 @@ func CreateProject(c *iris.Context, query QueryRequest)  {
 	return
 }
 
+func ModifyProjectAttributes(c *iris.Context, query QueryRequest)  {
+	tokenRecord := c.Get("token").(TokenRecord)
+	if helper.Enforcer.Enforce(tokenRecord.UserName, API_CreateProject, ACT_ACCESS) != true {
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+		return
+	}
+
+	err := db.UpdateProjectRecord(query.ProjectId, query.ProjectName, query.Description)
+	if err != nil {
+		helper.Logger.Println(5, "failed modify project for query: ", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed modify project",Data:query})
+		return
+	}
+	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	return
+}
+
 func DeleteProject(c *iris.Context, query QueryRequest)  {
 	tokenRecord := c.Get("token").(TokenRecord)
 	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeleteProject, ACT_ACCESS) != true {

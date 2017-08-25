@@ -1,11 +1,13 @@
 package api
+
 import (
-	"gopkg.in/iris.v4"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"gopkg.in/iris.v4"
 )
+
 func EnvHandler(c *iris.Context) {
-	app := struct {AppName string} {AppName: "object storage system manager"}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0, Message:"", Data: app})
+	app := struct{ AppName string }{AppName: "object storage system manager"}
+	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: app})
 }
 
 func ApiHandle(c *iris.Context) {
@@ -38,6 +40,8 @@ func ApiHandle(c *iris.Context) {
 		DescribeProject(c, query)
 	case ACTION_CreateProject:
 		CreateProject(c, query)
+	case ACTION_ModifyProjectAttributes:
+		ModifyProjectAttributes(c, query)
 	case ACTION_DeleteProject:
 		DeleteProject(c, query)
 	case ACTION_ListProjects:
@@ -66,8 +70,34 @@ func ApiHandle(c *iris.Context) {
 		CreateAccessKey(c, query)
 	case ACTION_DeleteAccessKey:
 		DeleteAccessKey(c, query)
+
+	// supermanager apis
+	case ACTION_CreateRegion:
+		CreateRegion(c, query)
+	case ACTION_DeleteRegion:
+		DeleteRegion(c, query)
+	case ACTION_DescribeRegions:
+		DescribeRegions(c, query)
+	case ACTION_ModifyRegionAttributes:
+		ModifyRegionAttributes(c, query)
+	case ACTION_CreateService:
+		CreateService(c, query)
+	case ACTION_DeleteService:
+		DeleteService(c, query)
+	case ACTION_ModifyServiceAttributes:
+		ModifyServiceAttributes(c, query)
+	case ACTION_DescribeServices:
+		DescribeServices(c, query)
+
+	case ACTION_DescribeProjectRoles:
+		DescribeProjectRoles(c, query)
+	case ACTION_CreateProjectRole:
+		CreateProjectRole(c, query)
+	case ACTION_DeleteProjectRole:
+		DeleteProjectRole(c, query)
+
 	default:
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"unsupport action",Data:""})
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "unsupport action", Data: ""})
 		return
 	}
 	return

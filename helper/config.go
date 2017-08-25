@@ -2,8 +2,9 @@ package helper
 
 import (
 	"encoding/json"
-	"os"
 	"math/rand"
+	"os"
+	"time"
 )
 
 func Ternary(IF bool, THEN interface{}, ELSE interface{}) interface{} {
@@ -20,6 +21,7 @@ var alphaNumericTable = []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var NumericTable = []byte("0123456789")
 
 func GenerateRandomId() []byte {
+	rand.Seed(time.Now().UnixNano())
 	alpha := make([]byte, 16, 16)
 	for i := 0; i < 16; i++ {
 		n := rand.Intn(len(alphaNumericTable))
@@ -29,6 +31,7 @@ func GenerateRandomId() []byte {
 }
 
 func GenerateRandomIdByLength(length int) []byte {
+	rand.Seed(time.Now().UnixNano())
 	alpha := make([]byte, length, length)
 	for i := 0; i < length; i++ {
 		n := rand.Intn(len(alphaNumericTable))
@@ -38,6 +41,7 @@ func GenerateRandomIdByLength(length int) []byte {
 }
 
 func GenerateRandomNumberId() []byte {
+	rand.Seed(time.Now().UnixNano())
 	alpha := make([]byte, 16, 16)
 	for i := 0; i < 16; i++ {
 		n := rand.Intn(len(NumericTable))
@@ -47,31 +51,31 @@ func GenerateRandomNumberId() []byte {
 }
 
 type Config struct {
-	ManageKey                  string
-	ManageSecret               string
-	LogPath                    string
-	PanicLogPath               string
-	PidFile                    string
-	BindPort                   int
-	DatabaseConnectionString   string
-	DebugMode                  bool
-	LogLevel                   int  //1-20
-	TokenExpire                int  //second
-	AccessKey, SecretKey, S3Domain      string
+	ManageKey                      string
+	ManageSecret                   string
+	LogPath                        string
+	PanicLogPath                   string
+	PidFile                        string
+	BindPort                       int
+	DatabaseConnectionString       string
+	DebugMode                      bool
+	LogLevel                       int //1-20
+	TokenExpire                    int //second
+	AccessKey, SecretKey, S3Domain string
 }
 
 type config struct {
-	ManageKey                  string
-	ManageSecret               string
-	LogPath                    string
-	PanicLogPath               string
-	PidFile                    string
-	BindPort                   int
-	DatabaseConnectionString   string
-	DebugMode                  bool
-	LogLevel                   int  //1-20
-	TokenExpire                int  //second
-	AccessKey, SecretKey, S3Domain      string
+	ManageKey                      string
+	ManageSecret                   string
+	LogPath                        string
+	PanicLogPath                   string
+	PidFile                        string
+	BindPort                       int
+	DatabaseConnectionString       string
+	DebugMode                      bool
+	LogLevel                       int //1-20
+	TokenExpire                    int //second
+	AccessKey, SecretKey, S3Domain string
 }
 
 var CONFIG Config
@@ -100,8 +104,7 @@ func SetupConfig() {
 	CONFIG.DebugMode = c.DebugMode
 	CONFIG.LogLevel = Ternary(c.LogLevel == 0, 5, c.LogLevel).(int)
 	CONFIG.TokenExpire = Ternary(c.TokenExpire == 0, 28800, c.TokenExpire).(int)
-	CONFIG.AccessKey= c.AccessKey
+	CONFIG.AccessKey = c.AccessKey
 	CONFIG.SecretKey = c.SecretKey
 	CONFIG.S3Domain = c.S3Domain
 }
-

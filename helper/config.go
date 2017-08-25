@@ -58,6 +58,7 @@ type Config struct {
 	PidFile                        string
 	BindPort                       int
 	DatabaseConnectionString       string
+	CasbinDbString                 string
 	DebugMode                      bool
 	LogLevel                       int //1-20
 	TokenExpire                    int //second
@@ -72,6 +73,7 @@ type config struct {
 	PidFile                        string
 	BindPort                       int
 	DatabaseConnectionString       string
+	CasbinDbString                 string
 	DebugMode                      bool
 	LogLevel                       int //1-20
 	TokenExpire                    int //second
@@ -101,6 +103,7 @@ func SetupConfig() {
 	CONFIG.PidFile = c.PidFile
 	CONFIG.BindPort = c.BindPort
 	CONFIG.DatabaseConnectionString = c.DatabaseConnectionString
+	CONFIG.CasbinDbString = c.CasbinDbString
 	CONFIG.DebugMode = c.DebugMode
 	CONFIG.LogLevel = Ternary(c.LogLevel == 0, 5, c.LogLevel).(int)
 	CONFIG.TokenExpire = Ternary(c.TokenExpire == 0, 28800, c.TokenExpire).(int)

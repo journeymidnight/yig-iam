@@ -6,6 +6,7 @@
     "PidFile": "/tmp/iam.pid",
     "BindPort": 8888,
     "DatabaseConnectionString": "root:12345678@/iam",
+    "CasbinDbString": "root:12345678@tcp(127.0.0.1:3306)/",
     "DebugMode": false,
     "LogLeval": 5,
     "TokenExpire": 3600,

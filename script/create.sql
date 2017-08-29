@@ -79,6 +79,7 @@ create table ProjectUser(
 id int(11) primary key not null AUTO_INCREMENT,
 user_id varchar(50),
 project_id varchar(50),
+project_name varchar(50),
 role int(11),
 created varchar(254)
 )default charset=utf8;

@@ -8,9 +8,9 @@ import (
 var Enforcer *casbin.Enforcer
 
 func Casbin_init() {
-	Enforcer.AddPolicy([]string{ROLE_ROOT, ACTION_CreateProjectRole, "ACCESS"})
-	Enforcer.AddPolicy([]string{ROLE_ROOT, ACTION_DeleteProjectRole, "ACCESS"})
-	Enforcer.AddPolicy([]string{ROLE_ROOT, ACTION_DescribeProjectRoles, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateProjectRole, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteProjectRole, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DescribeProjectRoles, "ACCESS"})
 
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateRegion, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteRegion, "ACCESS"})
@@ -36,6 +36,7 @@ func Casbin_init() {
 	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_CreateUser, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_DeleteUser, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_DescribeProject, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_GetLinkedProjectsByAccount, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateProject, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ModifyProjectAttributes, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteProject, "ACCESS"})

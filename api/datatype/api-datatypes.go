@@ -11,9 +11,10 @@ const (
 )
 
 const (
-	API_CreateProjectRole    = "CreateProjectRole"
-	API_DeleteProjectRole    = "DeleteProjectRole"
-	API_DescribeProjectRoles = "DescribeProjectRoles"
+	API_CreateProjectRole          = "CreateProjectRole"
+	API_DeleteProjectRole          = "DeleteProjectRole"
+	API_DescribeProjectRoles       = "DescribeProjectRoles"
+	API_GetLinkedProjectsByAccount = "GetLinkedProjectsByAccount"
 
 	//supermanager apis
 	API_CreateRegion            = "CreateRegion"
@@ -58,6 +59,7 @@ const (
 	ACTION_CreateProjectRole           = "CreateProjectRole"
 	ACTION_DeleteProjectRole           = "DeleteProjectRole"
 	ACTION_DescribeProjectRoles        = "DescribeProjectRoles"
+	ACTION_GetLinkedProjectsByAccount  = "GetLinkedProjectsByAccount"
 	ACTION_CreateRegion                = "CreateRegion"
 	ACTION_DeleteRegion                = "DeleteRegion"
 	ACTION_DescribeRegions             = "DescribeRegions"
@@ -173,9 +175,10 @@ type QueryResponse struct {
 }
 
 type ConnectServiceResponse struct {
-	Token     string `json:"token"`
-	Type      string `json:"type"`
-	AccountId string `json:"accountId"`
+	Token      string                `json:"token"`
+	Type       string                `json:"type"`
+	AccountId  string                `json:"accountId"`
+	ProjectSet []LinkedProjectRecord `json:"projectSet"`
 }
 
 type UserRecord struct {
@@ -270,12 +273,13 @@ type ListServiceResp struct {
 }
 
 type ProjectRoleRecord struct {
-	UserId    string `json:"userId"`
-	ProjectId string `json:"projectId"`
-	Role      int    `json:"role"`
-	Created   string `json:"created"`
-	Email     string `json:"email"`
-	Username  string `json:"username"`
+	UserId      string `json:"userId"`
+	ProjectId   string `json:"projectId"`
+	ProjectName string `json:"projectName"`
+	Role        int    `json:"role"`
+	Created     string `json:"created"`
+	Email       string `json:"email"`
+	Username    string `json:"username"`
 }
 
 type ListProjectRoleResp struct {
@@ -283,4 +287,13 @@ type ListProjectRoleResp struct {
 	Total   int                 `json:"total"`
 	Offset  int                 `json:"offset"`
 	RoleSet []ProjectRoleRecord `json:"roleSet"`
+}
+
+type LinkedProjectRecord struct {
+	ProjectId   string `json:"projectId"`
+	ProjectName string `json:"projectName"`
+}
+
+type LinkedProjectsResp struct {
+	ProjectSet []LinkedProjectRecord `json:"projectSet"`
 }

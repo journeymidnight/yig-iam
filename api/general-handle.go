@@ -96,6 +96,8 @@ func ApiHandle(c *iris.Context) {
 	case ACTION_DeleteProjectRole:
 		DeleteProjectRole(c, query)
 
+	case ACTION_GetLinkedProjectsByAccount:
+		GetLinkedProjectsByAccount(c, query)
 	default:
 		c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "unsupport action", Data: ""})
 		return

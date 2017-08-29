@@ -34,13 +34,42 @@ func checkDbTables() {
 }
 
 // projectRole table
-func InsertProjectRoleRecord(projectId, userid string, role int) error {
+func InsertProjectRoleRecord(projectId, projectName, userid string, role int) error {
 	created := time.Now().Format(TimeFormat)
-	_, err := Db.Exec("insert into ProjectUser values( null, ?, ?, ?, ?)", userid, projectId, role, created)
+	_, err := Db.Exec("insert into ProjectUser values( null, ?, ?, ?, ?, ?)", userid, projectId, projectName, role, created)
 	if err != nil {
-		helper.Logger.Println(5, "Error add ProjectRole", userid, projectId, role, created, err.Error())
+		helper.Logger.Println(5, "Error add ProjectUser", userid, projectId, projectName, role, created, err.Error())
 	}
 	return err
+}
+
+func GetLinkedProjects(account string) ([]LinkedProjectRecord, error) {
+	var records []LinkedProjectRecord
+	rows, err := Db.Query("select * from ProjectUser where user_id=(?)", account)
+	if err != nil {
+		helper.Logger.Println(5, "Error GetLinkedProjects: ", err)
+		return records, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var record LinkedProjectRecord
+		var index int
+		var userid, role, created string
+		if err := rows.Scan(&index,
+			&userid,
+			&record.ProjectId,
+			&record.ProjectName,
+			&role,
+			&created); err != nil {
+			helper.Logger.Println(5, "Row scan error: ", err)
+			continue
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		helper.Logger.Println(5, "Row error: ", err)
+	}
+	return records, err
 }
 
 func ListProjectRoleRecordsByProjectId(projectid string) ([]ProjectRoleRecord, error) {
@@ -58,6 +87,7 @@ func ListProjectRoleRecordsByProjectId(projectid string) ([]ProjectRoleRecord, e
 			&someid,
 			&record.UserId,
 			&record.ProjectId,
+			&record.ProjectName,
 			&record.Role,
 			&record.Created); err != nil {
 			helper.Logger.Println(5, "Row scan error: ", err)
@@ -388,6 +418,18 @@ func UpdateProjectRecord(ProjectId, ProjectName, Description string) error {
 func DescribeProjectRecord(ProjectId string, AccountId string) (ProjectRecord, error) {
 	var record ProjectRecord
 	err := Db.QueryRow("select * from Project where projectId=(?) and accountId=(?)", ProjectId, AccountId).Scan(&record.ProjectId,
+		&record.ProjectName,
+		&record.AccountId,
+		&record.Description,
+		&record.Status,
+		&record.Created,
+		&record.Updated)
+	return record, err
+}
+
+func DescribeProjectRecordByProjectId(ProjectId string) (ProjectRecord, error) {
+	var record ProjectRecord
+	err := Db.QueryRow("select * from Project where projectId=(?)", ProjectId).Scan(&record.ProjectId,
 		&record.ProjectName,
 		&record.AccountId,
 		&record.Description,

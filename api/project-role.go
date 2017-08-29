@@ -13,10 +13,19 @@ func CreateProjectRole(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
 		return
 	}
-	err := db.InsertProjectRoleRecord(query.ProjectId, query.AccountId, query.Role)
+
+	//verify the project exists
+	projectRecord, err := db.DescribeProjectRecordByProjectId(query.ProjectId)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateProjectRole for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateProject", Data: query})
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateProjectRole, maybe you don't have such project", Data: query})
+		return
+	}
+
+	err = db.InsertProjectRoleRecord(query.ProjectId, projectRecord.ProjectName, query.AccountId, query.Role)
+	if err != nil {
+		helper.Logger.Println(5, "failed CreateProjectRole for query:", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateProjectRole", Data: query})
 		return
 	}
 	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: ""})
@@ -65,6 +74,32 @@ func DescribeProjectRoles(c *iris.Context, query QueryRequest) {
 	resp.Limit = 20
 	resp.Offset = 0
 	resp.Total = len(records)
+	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: resp})
+	return
+}
+
+func GetLinkedProjectsByAccount(c *iris.Context, query QueryRequest) {
+	tokenRecord := c.Get("token").(TokenRecord)
+
+	if helper.Enforcer.Enforce(tokenRecord.UserName, API_GetLinkedProjectsByAccount, ACT_ACCESS) != true {
+		helper.Logger.Printf(5, "failed GetLinkedProjectsByAccount for query: %+v, token: %+v\r\n", query, tokenRecord)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+		return
+	}
+
+	//if tokenRecord.Type != ROLE_ROOT {
+	//	c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "only accounts can linked to projects", Data: query})
+	//	return
+	//}
+
+	records, err := db.GetLinkedProjects(tokenRecord.AccountId)
+	if err != nil {
+		helper.Logger.Println(5, "failed GetLinkedProjectsByAccount for query:", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed GetLinkedProjectsByAccount", Data: query})
+		return
+	}
+	var resp LinkedProjectsResp
+	resp.ProjectSet = records
 	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: resp})
 	return
 }

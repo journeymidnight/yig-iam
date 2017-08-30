@@ -83,22 +83,18 @@ func DescribeRegions(c *iris.Context, query QueryRequest) {
 		return
 	}
 
-	if tokenRecord.Type == ROLE_ROOT {
-		records, err := db.ListRegionRecords()
-		if err != nil {
-			helper.Logger.Println(5, "failed DescribeProject for query:", query)
-			c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed DescribeProject", Data: query})
-			return
-		}
-
-		var resp ListRegionResp
-		resp.Regions = records
-		resp.Limit = 20
-		resp.Offset = 0
-		resp.Total = len(records)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: resp})
-	} else {
-
+	records, err := db.ListRegionRecords()
+	if err != nil {
+		helper.Logger.Println(5, "failed DescribeProject for query:", query)
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed DescribeProject", Data: query})
+		return
 	}
+
+	var resp ListRegionResp
+	resp.Regions = records
+	resp.Limit = 20
+	resp.Offset = 0
+	resp.Total = len(records)
+	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: resp})
 	return
 }

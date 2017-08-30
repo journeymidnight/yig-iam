@@ -15,6 +15,7 @@ const (
 	API_DeleteProjectRole          = "DeleteProjectRole"
 	API_DescribeProjectRoles       = "DescribeProjectRoles"
 	API_GetLinkedProjectsByAccount = "GetLinkedProjectsByAccount"
+	API_GetAutogenkeysByProjectId  = "GetAutogenkeysByProjectId"
 
 	//supermanager apis
 	API_CreateRegion            = "CreateRegion"
@@ -60,6 +61,7 @@ const (
 	ACTION_DeleteProjectRole           = "DeleteProjectRole"
 	ACTION_DescribeProjectRoles        = "DescribeProjectRoles"
 	ACTION_GetLinkedProjectsByAccount  = "GetLinkedProjectsByAccount"
+	ACTION_GetAutogenkeysByProjectId   = "GetAutogenkeysByProjectId"
 	ACTION_CreateRegion                = "CreateRegion"
 	ACTION_DeleteRegion                = "DeleteRegion"
 	ACTION_DescribeRegions             = "DescribeRegions"

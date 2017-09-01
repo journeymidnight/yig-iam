@@ -17,6 +17,7 @@ func Casbin_init() {
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteRegion, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ModifyRegionAttributes, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_DescribeRegions, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DescribeRegions, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateService, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteService, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DescribeServices, "ACCESS"})

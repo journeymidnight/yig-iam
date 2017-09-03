@@ -48,7 +48,7 @@ func LosApiHandler(c *iris.Context) {
 
 func getS3Domain(c *iris.Context) {
 	var data GetS3Domain
-	data.S3Domain = helper.CONFIG.S3Domain
+	data.S3Domain = "http://" + helper.CONFIG.S3Domain
 	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:data})
 }
 
@@ -105,8 +105,8 @@ func getBucketStats(c *iris.Context, query QueryRequest) {
 	}
 
 	Client := &http.Client{Timeout: time.Second * 5}
-	//url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False" +"uid=" + query.ProjectId
-	url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False" +"uid=" + "p-CbBGTC6aPQ" //query.ProjectId
+	url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False"
+	//url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False&" +"uid=" + "p-CbBGTC6aPQ" //query.ProjectId
 	method := "GET"
 
 //	slog.Println("new request to s3:" + url)

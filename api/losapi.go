@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 	"github.com/journeymidnight/yig-iam/helper"
+        "github.com/journeymidnight/yig-iam/db"
 	"github.com/minio/minio-go"	
 )
 
@@ -28,7 +29,7 @@ func LosApiHandler(c *iris.Context) {
 	query := c.Get("queryRequest").(QueryRequest)
 	switch query.Action {
 		case ACTION_LOS_GETS3DOMAIN:
-			getS3Domain(c)
+			getS3Domain(c, query)
 		case ACTION_LOS_LISTBUCKETS:
 			listBuckets(c, query)
 		case ACTION_LOS_DELETEBUCKET:
@@ -46,10 +47,42 @@ func LosApiHandler(c *iris.Context) {
 		}
 }
 
-func getS3Domain(c *iris.Context) {
-	var data GetS3Domain
-	data.S3Domain = "http://" + helper.CONFIG.S3Domain
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:data})
+func getS3Domain(c *iris.Context, query QueryRequest) {
+        tokenRecord := c.Get("token").(TokenRecord)
+        if helper.Enforcer.Enforce(tokenRecord.UserName, API_LOS_GetS3Domain, ACT_ACCESS) != true {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+                return
+        }
+
+        if query.Endpoint == "" {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "please provide an endpoint to verify", Data: query})
+                return
+        }
+
+        services, err := db.ListSerivceRecords()
+        if err != nil {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "failed to get all suppport services", Data: query})
+                return
+        }
+
+        found := false
+        for _, s := range services {
+                if s.Endpoint == query.Endpoint {
+                        found = true
+                        break
+                }
+        }
+
+        if found == true {
+                var data GetS3Domain
+                data.S3Domain = query.Endpoint
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: data})
+                return
+        } else {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "your s3domain is not supported", Data: query})
+                return
+        }
+
 }
 
 func listBuckets(c *iris.Context, query QueryRequest) {
@@ -59,9 +92,18 @@ func listBuckets(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4101,Message:"invalid accessKey and secretKay",Data:""})
 		return
 	}
-	//client, err := minio.NewV2(helper.CONFIG.S3Domain, ak, sk, helper.CONFIG.UseSSL)
-	client, err := minio.NewV2(helper.CONFIG.S3Domain, ak, sk, false)
-//	slog.Println("listbuckets:", cfg.S3Domain,ak,sk,cfg.UseSSL)
+        tokenRecord := c.Get("token").(TokenRecord)
+        if helper.Enforcer.Enforce(tokenRecord.UserName, API_LOS_GetS3Domain, ACT_ACCESS) != true {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+                return
+        }
+
+        if query.Endpoint == "" {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "please provide an endpoint to verify", Data: query})
+                return
+        }
+
+	client, err := minio.NewV2(query.Endpoint, ak, sk, false)
 	if err != nil {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:err.Error(),Data:""})
 		return
@@ -83,7 +125,18 @@ func deleteBucket(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4101,Message:"invalid accessKey and secretKay",Data:""})
 		return
 	}
-	client, err := minio.NewV2(helper.CONFIG.S3Domain, ak, sk, false)
+
+        tokenRecord := c.Get("token").(TokenRecord)
+        if helper.Enforcer.Enforce(tokenRecord.UserName, API_LOS_GetS3Domain, ACT_ACCESS) != true {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+                return
+        }
+
+        if query.Endpoint == "" {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "please provide an endpoint to verify", Data: query})
+                return
+        }
+	client, err := minio.NewV2(query.Endpoint, ak, sk, false)
 	if err != nil {
 		helper.Logger.Fatalln(5, err)
 	}
@@ -149,7 +202,19 @@ func createBucket(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4101,Message:"invalid accessKey and secretKay",Data:""})
 		return
 	}
-	client, err := minio.NewV2(helper.CONFIG.S3Domain, ak, sk, false)
+
+        tokenRecord := c.Get("token").(TokenRecord)
+        if helper.Enforcer.Enforce(tokenRecord.UserName, API_LOS_GetS3Domain, ACT_ACCESS) != true {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+                return
+        }
+
+        if query.Endpoint == "" {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "please provide an endpoint to verify", Data: query})
+                return
+        }
+
+	client, err := minio.NewV2(query.Endpoint, ak, sk, false)
 	if err != nil {
 		helper.Logger.Fatalln(0, err)
 	}
@@ -175,6 +240,18 @@ func putCors(c *iris.Context, query QueryRequest) {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode:4101,Message:"invalid accessKey and secretKay",Data:""})
 		return
 	}
+
+        tokenRecord := c.Get("token").(TokenRecord)
+        if helper.Enforcer.Enforce(tokenRecord.UserName, API_LOS_GetS3Domain, ACT_ACCESS) != true {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4030, Message: "You do not have permission to perform", Data: query})
+                return
+        }
+
+        if query.Endpoint == "" {
+                c.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "please provide an endpoint to verify", Data: query})
+                return
+        }
+
 	cors := `
 	<CORSConfiguration>
 		<CORSRule>

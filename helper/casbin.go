@@ -21,6 +21,7 @@ func Casbin_init() {
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateService, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DeleteService, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_DescribeServices, "ACCESS"})
+	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_DescribeServices, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ModifyServiceAttributes, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_CreateProject, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_ROOT, API_ModifyProjectAttributes, "ACCESS"})
@@ -59,6 +60,8 @@ func Casbin_init() {
 	Enforcer.AddPolicy([]string{ROLE_USER, API_ListAccessKeysByProject, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_USER, API_ListProjectByUser, "ACCESS"})
 	Enforcer.AddPolicy([]string{ROLE_USER, API_ListServiceByProject, "ACCESS"})
+
+        Enforcer.AddPolicy([]string{ROLE_ACCOUNT, API_LOS_GetS3Domain, "ACCESS"})
 
 	Enforcer.AddRoleForUser("root", ROLE_ROOT)
 	Enforcer.SavePolicy()

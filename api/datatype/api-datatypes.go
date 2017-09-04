@@ -54,6 +54,7 @@ const (
 	API_DescribeAccessKeysWithToken = "DescribeAccessKeysWithToken" //priviate api for internal system such as yig
 	API_CreateAccessKey             = "CreateAccessKey"
 	API_DeleteAccessKey             = "DeleteAccessKey"
+        API_LOS_GetS3Domain = "GetS3Domain"
 )
 
 const (

@@ -75,7 +75,7 @@ func getS3Domain(c *iris.Context, query QueryRequest) {
 
         if found == true {
                 var data GetS3Domain
-                data.S3Domain = query.Endpoint
+                data.S3Domain = "http://" + query.Endpoint
                 c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: data})
                 return
         } else {
@@ -158,8 +158,7 @@ func getBucketStats(c *iris.Context, query QueryRequest) {
 	}
 
 	Client := &http.Client{Timeout: time.Second * 5}
-	url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False"
-	//url := "http://" + helper.CONFIG.S3Domain + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False&" +"uid=" + "p-CbBGTC6aPQ" //query.ProjectId
+	url := "http://" + query.Endpoint + "/admin/bucket?format=json&bucket=" + query.Bucket +"&stats=False"
 	method := "GET"
 
 //	slog.Println("new request to s3:" + url)
@@ -268,7 +267,7 @@ func putCors(c *iris.Context, query QueryRequest) {
 	md5sum := md5.Sum([]byte(cors))
 	str := base64.StdEncoding.EncodeToString(md5sum[:])
 	client := &http.Client{}
-	url := "http://" + helper.CONFIG.S3Domain + "/" + query.Bucket + "?cors"
+	url := "http://" + query.Endpoint + "/" + query.Bucket + "?cors"
 //	slog.Println("put cors url:", url)
 	request, err := http.NewRequest("PUT", url, strings.NewReader(cors))
 	if err != nil {

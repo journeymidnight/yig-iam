@@ -44,20 +44,21 @@ func CreateAccessKey(c *iris.Context, query QueryRequest) {
 		return
 	}
 
-	ak, sk, err := createkeypair(query.ProjectId, tokenRecord.AccountId, query.KeyName, query.Description, false)
+	_, _, err := createkeypair(query.ProjectId, tokenRecord.AccountId, query.KeyName, query.Description, false)
 	if err != nil {
 		helper.Logger.Printf(5, "failed CreateAccessKey for query %+v, error is %s", query, err.Error())
 		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: err.Error(), Data: query})
 		return
 	}
 
+        // no longger need to store keys in s3
 	// create a key in s3
-	err = s3CreateKey(query.ProjectId, ak, sk) // fixme: use username as project id for now
-	if err != nil {
-		helper.Logger.Println(5, "failed CreateAccessKey in s3")
-		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateAccessKey, failed to connect to object storage system", Data: query})
-		return
-	}
+	//err = s3CreateKey(query.ProjectId, ak, sk) // fixme: use username as project id for now
+	//if err != nil {
+	//	helper.Logger.Println(5, "failed CreateAccessKey in s3")
+	//	c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateAccessKey, failed to connect to object storage system", Data: query})
+	//	return
+	//}
 
 	c.JSON(iris.StatusOK, QueryResponse{RetCode: 0, Message: "", Data: ""})
 	return
@@ -72,19 +73,20 @@ func DeleteAccessKey(c *iris.Context, query QueryRequest) {
 
 	// delete it from s3 before delete it
 	// we must delete it from s3 before delete from db, otherwise we will never delete the key successfully because we can't got the sk and pid anymore.
-	sk, pid, err := db.GetSkAndProjectByAk(query.AccessKey)
+	_, _, err := db.GetSkAndProjectByAk(query.AccessKey)
 	if err != nil {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "no such pair of key", Data: ""})
 		return
-	} else {
-		// delete the in s3
-		err = s3DeleteKey(pid, query.AccessKey, sk)
-		if err != nil {
-			helper.Logger.Println(5, "failed s3DeleteKey in s3")
-			c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateAccessKey, failed to connect to object storage system", Data: query})
-			return
-		}
-	}
+	} 
+
+        // no longger need to delete keys in s3 cluster because we don't store it any more
+	//// delete the in s3
+	//err = s3DeleteKey(pid, query.AccessKey, sk)
+	//if err != nil {
+	//	helper.Logger.Println(5, "failed s3DeleteKey in s3")
+	//	c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed CreateAccessKey, failed to connect to object storage system", Data: query})
+	//	return
+	//}
 
 	err = db.RemoveAkSkRecord(query.AccessKey)
 	if err != nil {
@@ -130,7 +132,7 @@ func DescribeAccessKeys(c *iris.Context, query QueryRequest) {
 	records, err := db.GetKeysByAccessKeys(query.AccessKeys)
 	if err != nil {
 		helper.Logger.Println(5, "failed DescribeProject for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed DescribeProject", Data: query})
+		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "failed DescribeAccessKeys", Data: query})
 		return
 	}
 	resp.AccessKeySet = records

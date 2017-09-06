@@ -71,8 +71,7 @@ func main() {
 		AllowedOrigins:     []string{"*"},
 		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"},
 		OptionsPassthrough: true,
-		Debug:              true,
-		AllowedHeaders:     []string{"Content-Type", "X-Iam-Token"},
+		AllowedHeaders:     []string{"Content-Type", "X-Iam-Token", "X-Le-Endpoint", "X-Le-Key", "X-Le-Secret"},
 	})
 	app.Use(c)
 	app.Post("/iamapi", tokenMiddleware.Serve, api.ApiHandle)

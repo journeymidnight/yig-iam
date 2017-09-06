@@ -15,7 +15,9 @@ import (
 	"github.com/journeymidnight/yig-iam/helper"
 	"github.com/journeymidnight/yig-iam/log"
 	tokenMiddleware "github.com/journeymidnight/yig-iam/middleware/token"
-	"gopkg.in/iris.v4"
+	"gopkg.in/iris-contrib/middleware.v4/cors"
+	//"gopkg.in/kataras/iris.v4"
+	"gopkg.in/kataras/iris.v4"
 )
 
 var logger *log.Logger
@@ -63,8 +65,18 @@ func main() {
 	db.Db = db.CreateDbConnection()
 	defer db.Db.Close()
 	tokenMiddleware := tokenMiddleware.New()
-	iris.Post("/iamapi", tokenMiddleware.Serve, api.ApiHandle)
-	iris.Post("/losapi", tokenMiddleware.Serve, api.LosApiHandler)
-	iris.Get("/env", api.EnvHandler)
-	iris.Listen(":" + strconv.Itoa(helper.CONFIG.BindPort))
+
+	app := iris.New()
+	c := cors.New(cors.Options{
+		AllowedOrigins:     []string{"*"},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"},
+		OptionsPassthrough: true,
+		Debug:              true,
+		AllowedHeaders:     []string{"Content-Type", "X-Iam-Token"},
+	})
+	app.Use(c)
+	app.Post("/iamapi", tokenMiddleware.Serve, api.ApiHandle)
+	app.Post("/losapi", tokenMiddleware.Serve, api.LosApiHandler)
+	app.Get("/env", api.EnvHandler)
+	app.Listen(":" + strconv.Itoa(helper.CONFIG.BindPort))
 }

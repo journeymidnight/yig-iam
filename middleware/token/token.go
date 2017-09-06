@@ -1,10 +1,10 @@
 package token
 
 import (
-	"github.com/journeymidnight/yig-iam/helper"
-	"github.com/journeymidnight/yig-iam/db"
-	"gopkg.in/iris.v4"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/db"
+	"github.com/journeymidnight/yig-iam/helper"
+	"gopkg.in/kataras/iris.v4"
 )
 
 type Middleware struct {
@@ -39,20 +39,20 @@ func (m *Middleware) Get(ctx *iris.Context) *string {
 func (m *Middleware) Serve(ctx *iris.Context) {
 	query := QueryRequest{}
 	if err := ctx.ReadJSON(&query); err != nil {
-		ctx.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"bad request"})
+		ctx.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "bad request"})
 		return
 	}
 	ctx.Set("queryRequest", query)
 	helper.Logger.Println(5, "enter middleware", query)
-	if query.Action == ACTION_ConnectService || query.Action == ACTION_DescribeAccessKeys{
+	if query.Action == ACTION_ConnectService || query.Action == ACTION_DescribeAccessKeys {
 		ctx.Next()
 	} else if query.Token == "" {
-		ctx.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"Not authorized, Need login first"})
+		ctx.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "Not authorized, Need login first"})
 		return
 	} else {
 		err := m.CheckToken(ctx, query.Token)
 		if err != nil {
-			ctx.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"Token invalid"})
+			ctx.JSON(iris.StatusOK, QueryResponse{RetCode: 4000, Message: "Token invalid"})
 			return
 		}
 	}
@@ -60,7 +60,7 @@ func (m *Middleware) Serve(ctx *iris.Context) {
 }
 
 func (m *Middleware) CheckToken(ctx *iris.Context, token string) error {
-	record, err:= db.GetTokenRecord(token)
+	record, err := db.GetTokenRecord(token)
 	if err != nil {
 		return err
 	}

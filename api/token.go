@@ -5,7 +5,7 @@ import (
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 	"github.com/journeymidnight/yig-iam/db"
 	"github.com/journeymidnight/yig-iam/helper"
-	"gopkg.in/iris.v4"
+	"gopkg.in/kataras/iris.v4"
 )
 
 func ConnectService(c *iris.Context, query QueryRequest) {

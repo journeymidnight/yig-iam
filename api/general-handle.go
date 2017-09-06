@@ -2,7 +2,7 @@ package api
 
 import (
 	. "github.com/journeymidnight/yig-iam/api/datatype"
-	"gopkg.in/iris.v4"
+	"gopkg.in/kataras/iris.v4"
 )
 
 func EnvHandler(c *iris.Context) {

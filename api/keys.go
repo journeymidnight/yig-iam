@@ -7,7 +7,7 @@ import (
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 	"github.com/journeymidnight/yig-iam/db"
 	"github.com/journeymidnight/yig-iam/helper"
-	"gopkg.in/iris.v4"
+	"gopkg.in/kataras/iris.v4"
 )
 
 func createkeypair(ProjectId, AccountId, KeyName, Description string, IsAutoGen bool) (string, string, error) {
@@ -51,7 +51,7 @@ func CreateAccessKey(c *iris.Context, query QueryRequest) {
 		return
 	}
 
-        // no longger need to store keys in s3
+	// no longger need to store keys in s3
 	// create a key in s3
 	//err = s3CreateKey(query.ProjectId, ak, sk) // fixme: use username as project id for now
 	//if err != nil {
@@ -77,9 +77,9 @@ func DeleteAccessKey(c *iris.Context, query QueryRequest) {
 	if err != nil {
 		c.JSON(iris.StatusOK, QueryResponse{RetCode: 4010, Message: "no such pair of key", Data: ""})
 		return
-	} 
+	}
 
-        // no longger need to delete keys in s3 cluster because we don't store it any more
+	// no longger need to delete keys in s3 cluster because we don't store it any more
 	//// delete the in s3
 	//err = s3DeleteKey(pid, query.AccessKey, sk)
 	//if err != nil {

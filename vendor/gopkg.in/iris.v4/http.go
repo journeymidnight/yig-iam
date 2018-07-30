@@ -16,7 +16,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"golang.org/x/crypto/acme/autocert"
-	"github.com/rsc/letsencrypt"
+	"gopkg.in/iris-contrib/letsencrypt.v4"
 	"gopkg.in/kataras/go-errors.v0"
 )
 

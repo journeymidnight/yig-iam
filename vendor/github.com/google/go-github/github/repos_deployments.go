@@ -6,7 +6,6 @@
 package github
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -62,7 +61,7 @@ type DeploymentsListOptions struct {
 // ListDeployments lists the deployments of a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/deployments/#list-deployments
-func (s *RepositoriesService) ListDeployments(ctx context.Context, owner, repo string, opt *DeploymentsListOptions) ([]*Deployment, *Response, error) {
+func (s *RepositoriesService) ListDeployments(owner, repo string, opt *DeploymentsListOptions) ([]*Deployment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/deployments", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -74,39 +73,19 @@ func (s *RepositoriesService) ListDeployments(ctx context.Context, owner, repo s
 		return nil, nil, err
 	}
 
-	var deployments []*Deployment
-	resp, err := s.client.Do(ctx, req, &deployments)
+	deployments := new([]*Deployment)
+	resp, err := s.client.Do(req, deployments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return deployments, resp, nil
-}
-
-// GetDeployment returns a single deployment of a repository.
-//
-// GitHub API docs: https://developer.github.com/v3/repos/deployments/#get-a-single-deployment
-func (s *RepositoriesService) GetDeployment(ctx context.Context, owner, repo string, deploymentID int) (*Deployment, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/deployments/%v", owner, repo, deploymentID)
-
-	req, err := s.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	deployment := new(Deployment)
-	resp, err := s.client.Do(ctx, req, deployment)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return deployment, resp, nil
+	return *deployments, resp, err
 }
 
 // CreateDeployment creates a new deployment for a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/deployments/#create-a-deployment
-func (s *RepositoriesService) CreateDeployment(ctx context.Context, owner, repo string, request *DeploymentRequest) (*Deployment, *Response, error) {
+func (s *RepositoriesService) CreateDeployment(owner, repo string, request *DeploymentRequest) (*Deployment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/deployments", owner, repo)
 
 	req, err := s.client.NewRequest("POST", u, request)
@@ -118,12 +97,12 @@ func (s *RepositoriesService) CreateDeployment(ctx context.Context, owner, repo 
 	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
 
 	d := new(Deployment)
-	resp, err := s.client.Do(ctx, req, d)
+	resp, err := s.client.Do(req, d)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return d, resp, nil
+	return d, resp, err
 }
 
 // DeploymentStatus represents the status of a
@@ -145,6 +124,7 @@ type DeploymentStatus struct {
 // DeploymentStatusRequest represents a deployment request
 type DeploymentStatusRequest struct {
 	State          *string `json:"state,omitempty"`
+	TargetURL      *string `json:"target_url,omitempty"` // Deprecated. Use LogURL instead.
 	LogURL         *string `json:"log_url,omitempty"`
 	Description    *string `json:"description,omitempty"`
 	EnvironmentURL *string `json:"environment_url,omitempty"`
@@ -154,7 +134,7 @@ type DeploymentStatusRequest struct {
 // ListDeploymentStatuses lists the statuses of a given deployment of a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/deployments/#list-deployment-statuses
-func (s *RepositoriesService) ListDeploymentStatuses(ctx context.Context, owner, repo string, deployment int, opt *ListOptions) ([]*DeploymentStatus, *Response, error) {
+func (s *RepositoriesService) ListDeploymentStatuses(owner, repo string, deployment int, opt *ListOptions) ([]*DeploymentStatus, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/deployments/%v/statuses", owner, repo, deployment)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -166,42 +146,19 @@ func (s *RepositoriesService) ListDeploymentStatuses(ctx context.Context, owner,
 		return nil, nil, err
 	}
 
-	var statuses []*DeploymentStatus
-	resp, err := s.client.Do(ctx, req, &statuses)
+	statuses := new([]*DeploymentStatus)
+	resp, err := s.client.Do(req, statuses)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return statuses, resp, nil
-}
-
-// GetDeploymentStatus returns a single deployment status of a repository.
-//
-// GitHub API docs: https://developer.github.com/v3/repos/deployments/#get-a-single-deployment-status
-func (s *RepositoriesService) GetDeploymentStatus(ctx context.Context, owner, repo string, deploymentID, deploymentStatusID int) (*DeploymentStatus, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/deployments/%v/statuses/%v", owner, repo, deploymentID, deploymentStatusID)
-
-	req, err := s.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: remove custom Accept header when deployment support fully launches
-	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
-
-	d := new(DeploymentStatus)
-	resp, err := s.client.Do(ctx, req, d)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return d, resp, nil
+	return *statuses, resp, err
 }
 
 // CreateDeploymentStatus creates a new status for a deployment.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/deployments/#create-a-deployment-status
-func (s *RepositoriesService) CreateDeploymentStatus(ctx context.Context, owner, repo string, deployment int, request *DeploymentStatusRequest) (*DeploymentStatus, *Response, error) {
+func (s *RepositoriesService) CreateDeploymentStatus(owner, repo string, deployment int, request *DeploymentStatusRequest) (*DeploymentStatus, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/deployments/%v/statuses", owner, repo, deployment)
 
 	req, err := s.client.NewRequest("POST", u, request)
@@ -213,10 +170,10 @@ func (s *RepositoriesService) CreateDeploymentStatus(ctx context.Context, owner,
 	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
 
 	d := new(DeploymentStatus)
-	resp, err := s.client.Do(ctx, req, d)
+	resp, err := s.client.Do(req, d)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return d, resp, nil
+	return d, resp, err
 }

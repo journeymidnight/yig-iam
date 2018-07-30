@@ -1,83 +1,107 @@
 package api
 
 import (
-"gopkg.in/iris.v4"
-"github.com/journeymidnight/yig-iam/helper"
-"github.com/journeymidnight/yig-iam/db"
-. "github.com/journeymidnight/yig-iam/api/datatype"
+	"github.com/journeymidnight/yig-iam/helper"
+	"github.com/journeymidnight/yig-iam/db"
+	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"io/ioutil"
+	"net/http"
+	"encoding/json"
+	. "github.com/journeymidnight/yig-iam/error"
 )
 
-func CreateProject(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_CreateProject, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+const (
+
+)
+
+func CreateProject(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	id := "p-" + string(helper.GenerateRandomId())
-	err := db.InsertProjectRecord(id, query.ProjectName, tokenRecord.AccountId, query.Description)
+	//ak, sk := helper.GenerateKey()
+	err = db.CreateProject(query.ProjectName, PUBLIC_PROJECT, token.AccountId, query.Description)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateProject for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed CreateProject",Data:query})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteErrorResponse(w, r, nil)
 	return
 }
 
-func DeleteProject(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeleteProject, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func DeleteProject(w http.ResponseWriter, r *http.Request)  {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	err := db.RemoveProjectRecord(query.ProjectId, tokenRecord.AccountId)
+	err = db.RemoveProject(query.ProjectId, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DeleteProject for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DeleteProject",Data:query})
+		WriteErrorResponse(w, r, ErrDbOperateFailed)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteErrorResponse(w, r, nil)
 	return
 }
 
-func DescribeProject(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DescribeProject, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func DescribeProject(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	record, err := db.DescribeProjectRecord(query.ProjectId, tokenRecord.AccountId)
+	record, err := db.DescribeProject(query.ProjectId, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DescribeProject for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeProject",Data:query})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:record})
+	WriteSuccessResponse(w, EncodeResponse(record))
 	return
 }
 
-func ListProjects(c *iris.Context, query QueryRequest) {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_ListProjects, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	if tokenRecord.Type == ROLE_ACCOUNT || tokenRecord.Type == ROLE_ROOT {
-		records, err := db.ListProjectRecords(tokenRecord.AccountId)
+func ListProjects(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	if token.Type == ROLE_ACCOUNT || token.Type == ROLE_USER{
+		resp, err := db.ListProjects(token.UserId)
 		if err != nil {
-			helper.Logger.Println(5, "failed DescribeProject for query:", query)
-			c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeProject",Data:query})
+			WriteErrorResponse(w, r, err)
 			return
 		}
-
-		var resp ListProjectResp
-		resp.Projects = records
-		resp.Limit = 20
-		resp.Offset = 0
-		resp.Total = len(records)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
+		WriteSuccessResponse(w, EncodeResponse(resp))
 	} else {
-
+		WriteSuccessResponse(w, EncodeResponse([]ListProjectResp{}))
 	}
+	return
+}
+
+func ListProjectByUser(w http.ResponseWriter, r *http.Request) {
+	//token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	record, err := db.ListProjects(query.UserId)
+	if err != nil {
+		helper.Logger.Println(5, "failed list projects for query:", query)
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	WriteSuccessResponse(w, EncodeResponse(record))
 	return
 }

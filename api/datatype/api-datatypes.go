@@ -1,42 +1,27 @@
 package datatype
 
+import "time"
+
 const (
 	ROLE_ROOT = "ROOT"
 	ROLE_ACCOUNT = "ACCOUNT"
 	ROLE_USER = "USER"
+	REQUEST_TOKEN_KEY = "TOKEN"
+	USER_STATUS_INACTIVE	= "inactive"
+	USER_STATUS_ACTIVE	= "active"
+	PROJECT_STATUS_INACTIVE	= "inactive"
+	PROJECT_STATUS_ACTIVE	= "active"
+	PROJECT_STATUS_DELETED	= "deleted"
+	KEY_STATUS_ENABLE = "enable"
+	KEY_STATUS_DISABLE = "disable"
+	ACL_RW = "RW"
+	ACL_RO = "RDONLY"
+	PUBLIC_PROJECT = "public"
+	PRIVATE_PROJECT = "private"
 )
 
 const (
 	ACT_ACCESS = "ACCESS"
-)
-
-const (
-	API_CreateAccount = "CreateAccount"
-	API_DeleteAccount = "DeleteAccount"
-	API_DescribeAccount = "DescribeAccount"
-	API_DeactivateAccount = "DeactivateAccount"
-	API_ActivateAccount = "ActivateAccount"
-	API_ListAccounts = "ListAccounts"
-	API_ListUsers = "ListUsers"
-	API_DescribeUser = "DescribeUser"
-	API_CreateUser = "CreateUser"
-	API_DeleteUser = "DeleteUser"
-	API_DescribeProject = "DescribeProject"
-	API_CreateProject = "CreateProject"
-	API_DeleteProject = "DeleteProject"
-	API_ListProjects = "ListProjects"
-	API_LinkUserWithProject = "LinkUserWithProject"
-	API_UnLinkUserWithProject = "UnLinkUserWithProject"
-	API_ListProjectByUser = "ListProjectByUser"
-	API_ListUserByProject = "ListUserByProject"
-	API_AddProjectService = "AddProjectService"
-	API_DelProjectService = "DelProjectService"
-	API_ListServiceByProject = "ListServiceByProject"
-	API_DescribeAccessKeys = "DescribeAccessKeys" //priviate api for internal system such as yig
-	API_ListAccessKeysByProject = "ListAccessKeysByProject"
-	API_DescribeAccessKeysWithToken = "DescribeAccessKeysWithToken" //priviate api for internal system such as yig
-	API_CreateAccessKey = "CreateAccessKey"
-	API_DeleteAccessKey = "DeleteAccessKey"
 )
 
 const (
@@ -69,10 +54,62 @@ const (
 	ACTION_DeleteAccessKey = "DeleteAccessKey"
 )
 
+type JsonTime time.Time
+func (j JsonTime) MarshalJSON() ([]byte, error) {
+	return []byte(`"`+time.Time(j).Format("2006-01-02 15:04:05")+`"`), nil
+}
+
+type Token struct {
+	Token     string     `json:"token" xorm:"'token' varchar(40) pk"`
+	UserName  string     `json:"userName"  xorm:"'userName' varchar(50) notnull"`
+	UserId  string     `json:"userId"  xorm:" 'userId' pk varchar(20) notnull"`
+	AccountId  string     `json:"accountId"  xorm:" 'accountId' varchar(20) notnull"`
+	Type      string     `json:"type"  xorm:"'type' varchar(10)  notnull"`
+	CreatedAt  JsonTime     `json:"created"  xorm:" 'created' created"`
+}
+
+
+type User struct {
+	UserName 	string    `json:"userName" xorm:" 'userName' varchar(50) pk notnull"`
+	Password    string     `json:"password" xorm:" 'password' varchar(20) notnull"`
+	UserId    string     `json:"userId" xorm:" 'userId' varchar(20) notnull"`
+	Type        string     `json:"type"  xorm:" 'type' varchar(10) notnull"`
+	Email        string     `json:"email"  xorm:" 'email' varchar(50) DEFAULT NULL"`
+	DisplayName  string     `json:"displayName"  xorm:" 'displayName' varchar(50) DEFAULT NULL"`
+	AccountId  string     `json:"accountId"  xorm:" 'accountId' varchar(20) notnull"`
+	Status  string     `json:"status"  xorm:" 'status' varchar(10) notnull"`
+	CreatedAt  JsonTime     `json:"created"  xorm:" 'created' created"`
+	UpdatedAt  JsonTime     `json:"updated"  xorm:" 'updated' updated"`
+}
+
+type Project struct {
+	ProjectId 	string    `json:"projectId" xorm:" 'projectId' pk varchar(20) notnull"`
+	ProjectName    string     `json:"projectName" xorm:" 'projectName' varchar(50) notnull"`
+	ProjectType    string     `json:"projectType" xorm:" 'projectType' varchar(20) notnull"`
+	AccountId  string     `json:"accountId"  xorm:" 'accountId' varchar(20) notnull"`
+	OwnerId  string     `json:"ownerId"  xorm:" 'ownerId' varchar(20) notnull"`
+	Description  string     `json:"description"  xorm:" 'description' varchar(50) DEFAULT NULL"`
+	Status  string     `json:"status"  xorm:" 'status' varchar(10) notnull"`
+	CreatedAt  JsonTime     `json:"created"  xorm:" 'created' created"`
+	UpdatedAt  JsonTime     `json:"updated"  xorm:" 'updated' updated"`
+}
+
+type UserProject struct {
+	AccessKey 	string    `json:"accessKey" xorm:" 'accessKey' varchar(20) notnull"`
+	AccessSecret    string     `json:"accessSecret" xorm:" 'accessSecret' varchar(40) notnull"`
+	Status  string     `json:"status"  xorm:" 'status' varchar(10) notnull"`
+	Acl    string     `json:"acl" xorm:" 'acl' varchar(20) notnull"`
+	ProjectId  string     `json:"projectId"  xorm:" 'projectId' pk varchar(20) notnull"`
+	UserId  string     `json:"userId"  xorm:" 'userId' pk varchar(20) notnull"`
+	AccountId  string     `json:"accountId"  xorm:" 'accountId' varchar(20) notnull"`
+	CreatedAt  JsonTime     `json:"created"  xorm:" 'created' created"`
+	UpdatedAt  JsonTime     `json:"updated"  xorm:" 'updated' updated"`
+}
+
 type QueryRequest struct{
-	Action string `json:"action"`
-	AccountId string `json:"accountId,omitempty"`
+	Acl string `json:"acl,omitempty"`
 	UserName string `json:"user,omitempty"`
+	UserId string `json:"userId,omitempty"`
 	KeyName string `json:"keyName,omitempty"`
 	ProjectId string `json:"projectId,omitempty"`
 	ProjectName string `json:"projectName,omitempty"`
@@ -110,11 +147,9 @@ type AccessKeyItem struct {
 	Description  string `json:"description"`
 }
 
-type DescribeKeysResp struct {
-	Limit        int             `json:"limit"`
-	Total        int             `json:"total"`
-	Offset       int             `json:"offset"`
-	AccessKeySet []AccessKeyItem `json:"accessKeySet"`
+type FetchAccessKeyResp struct {
+	AccessKey string `json:"accessKey"`
+	AccessSecret string `json:"accessSecret"`
 }
 
 /***********************************/
@@ -125,70 +160,84 @@ type QueryResponse struct {
 	Message string `json:"message"`
 }
 
-type ConnectServiceResponse struct {
+type LoginResponse struct {
 	Token string `json:"token"`
 	Type string `json:"type"`
+	UserId string `json:"userId"`
 	AccountId string `json:"accountId"`
 }
 
-type UserRecord struct {
-	UserName string
-	Password string
-	Type     string
-	Email    string
-	DisplayName string
-	AccountId string
-	Status   string
-	Created  string
-	Updated  string
-}
-
-type ProjectRecord struct {
-	ProjectId string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	AccountId string `json:"accountId"`
-	Description string `json:"description"`
-	Status string `json:"status"`
-	Created  string `json:"created"`
-	Updated  string `json:"updated"`
-}
+//type UserRecord struct {
+//	UserName string
+//	Password string
+//	Type     string
+//	Email    string
+//	DisplayName string
+//	AccountId string
+//	Status   string
+//	Created  string
+//	Updated  string
+//}
+//
+//type ProjectRecord struct {
+//	ProjectId string `json:"projectId"`
+//	ProjectName string `json:"projectName"`
+//	ProjectType string `json:"projectType"`
+//	AccountId string `json:"accountId"`
+//	Description string `json:"description"`
+//	Status string `json:"status"`
+//	Created  string `json:"created"`
+//	Updated  string `json:"updated"`
+//}
 
 type ListProjectResp struct {
-	Limit        int             `json:"limit"`
-	Total        int             `json:"total"`
-	Offset       int             `json:"offset"`
-	Projects []ProjectRecord     `json:"projectSet"`
+	UserProject `xorm:"extends"`
+	ProjectName    string
+	ProjectType    string
 }
 
-
-type UserProjectRecord struct {
-	UserName string `json:"userName"`
-	ProjectId string `json:"projectId"`
-	Created  string `json:"created"`
+func (ListProjectResp) TableName() string {
+	return "userproject"
 }
 
-type ProjectServiceRecord struct {
-	ProjectId string `json:"projectId"`
-	Service string `json:"service"`
-	AccountId string `json:"accountId"`
-	Created  string `json:"created"`
+type ListUserResp struct {
+	UserProject `xorm:"extends"`
+	UserName    string
+	DisplayName    string
 }
 
-type AkSkRecord struct {
-	AccessKey string `json:"accessKey"`
-	AccessSecret string `json:"accessSecret"`
-	ProjectId string `json:"projectId"`
-	AccountId string `json:"accountId"`
-	KeyName string `json:"keyName"`
-	Created  string `json:"created"`
-	Description string `json:"description"`
+func (ListUserResp) TableName() string {
+	return "userproject"
 }
 
-type TokenRecord struct {
-	Token string `json:"token"`
-	UserName string `json:"userName"`
-	AccountId string `json:"accountId"`
-	Type  string `json:"type"`
-	Created  string `json:"created"`
-	Expired  string `json:"expired"`
-}
+//type UserProjectRecord struct {
+//	UserName string `json:"userName"`
+//	ProjectId string `json:"projectId"`
+//	Created  string `json:"created"`
+//}
+//
+////type ProjectServiceRecord struct {
+////	ProjectId string `json:"projectId"`
+////	Service string `json:"service"`
+////	AccountId string `json:"accountId"`
+////	Created  string `json:"created"`
+////}
+//
+//type AkSkRecord struct {
+//	AccessKey string `json:"accessKey"`
+//	AccessSecret string `json:"accessSecret"`
+//	ProjectId string `json:"projectId"`
+//	AccountId string `json:"accountId"`
+//	KeyName string `json:"keyName"`
+//	Created  string `json:"created"`
+//	Description string `json:"description"`
+//}
+//
+//type TokenRecord struct {
+//	Token string `json:"token"`
+//	UserName string `json:"userName"`
+//	AccountId string `json:"accountId"`
+//	Type  string `json:"type"`
+//	Created  string `json:"created"`
+//	Expired  string `json:"expired"`
+//}

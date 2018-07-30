@@ -6,7 +6,6 @@
 package github
 
 import (
-	"context"
 	"fmt"
 	"time"
 )
@@ -35,8 +34,8 @@ func (r RepositoryComment) String() string {
 
 // ListComments lists all the comments for the repository.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#list-commit-comments-for-a-repository
-func (s *RepositoriesService) ListComments(ctx context.Context, owner, repo string, opt *ListOptions) ([]*RepositoryComment, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#list-commit-comments-for-a-repository
+func (s *RepositoriesService) ListComments(owner, repo string, opt *ListOptions) ([]*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -51,19 +50,19 @@ func (s *RepositoriesService) ListComments(ctx context.Context, owner, repo stri
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	var comments []*RepositoryComment
-	resp, err := s.client.Do(ctx, req, &comments)
+	comments := new([]*RepositoryComment)
+	resp, err := s.client.Do(req, comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return comments, resp, nil
+	return *comments, resp, err
 }
 
 // ListCommitComments lists all the comments for a given commit SHA.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#list-comments-for-a-single-commit
-func (s *RepositoriesService) ListCommitComments(ctx context.Context, owner, repo, sha string, opt *ListOptions) ([]*RepositoryComment, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#list-comments-for-a-single-commit
+func (s *RepositoriesService) ListCommitComments(owner, repo, sha string, opt *ListOptions) ([]*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/commits/%v/comments", owner, repo, sha)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -78,20 +77,20 @@ func (s *RepositoriesService) ListCommitComments(ctx context.Context, owner, rep
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	var comments []*RepositoryComment
-	resp, err := s.client.Do(ctx, req, &comments)
+	comments := new([]*RepositoryComment)
+	resp, err := s.client.Do(req, comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return comments, resp, nil
+	return *comments, resp, err
 }
 
 // CreateComment creates a comment for the given commit.
 // Note: GitHub allows for comments to be created for non-existing files and positions.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#create-a-commit-comment
-func (s *RepositoriesService) CreateComment(ctx context.Context, owner, repo, sha string, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#create-a-commit-comment
+func (s *RepositoriesService) CreateComment(owner, repo, sha string, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/commits/%v/comments", owner, repo, sha)
 	req, err := s.client.NewRequest("POST", u, comment)
 	if err != nil {
@@ -99,18 +98,18 @@ func (s *RepositoriesService) CreateComment(ctx context.Context, owner, repo, sh
 	}
 
 	c := new(RepositoryComment)
-	resp, err := s.client.Do(ctx, req, c)
+	resp, err := s.client.Do(req, c)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return c, resp, nil
+	return c, resp, err
 }
 
 // GetComment gets a single comment from a repository.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#get-a-single-commit-comment
-func (s *RepositoriesService) GetComment(ctx context.Context, owner, repo string, id int) (*RepositoryComment, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#get-a-single-commit-comment
+func (s *RepositoriesService) GetComment(owner, repo string, id int) (*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -121,18 +120,18 @@ func (s *RepositoriesService) GetComment(ctx context.Context, owner, repo string
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	c := new(RepositoryComment)
-	resp, err := s.client.Do(ctx, req, c)
+	resp, err := s.client.Do(req, c)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return c, resp, nil
+	return c, resp, err
 }
 
 // UpdateComment updates the body of a single comment.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#update-a-commit-comment
-func (s *RepositoriesService) UpdateComment(ctx context.Context, owner, repo string, id int, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#update-a-commit-comment
+func (s *RepositoriesService) UpdateComment(owner, repo string, id int, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("PATCH", u, comment)
 	if err != nil {
@@ -140,22 +139,22 @@ func (s *RepositoriesService) UpdateComment(ctx context.Context, owner, repo str
 	}
 
 	c := new(RepositoryComment)
-	resp, err := s.client.Do(ctx, req, c)
+	resp, err := s.client.Do(req, c)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return c, resp, nil
+	return c, resp, err
 }
 
 // DeleteComment deletes a single comment from a repository.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/comments/#delete-a-commit-comment
-func (s *RepositoriesService) DeleteComment(ctx context.Context, owner, repo string, id int) (*Response, error) {
+// GitHub API docs: http://developer.github.com/v3/repos/comments/#delete-a-commit-comment
+func (s *RepositoriesService) DeleteComment(owner, repo string, id int) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
-	return s.client.Do(ctx, req, nil)
+	return s.client.Do(req, nil)
 }

@@ -6,7 +6,6 @@
 package github
 
 import (
-	"context"
 	"fmt"
 	"time"
 )
@@ -14,7 +13,7 @@ import (
 // OrganizationsService provides access to the organization related functions
 // in the GitHub API.
 //
-// GitHub API docs: https://developer.github.com/v3/orgs/
+// GitHub API docs: http://developer.github.com/v3/orgs/
 type OrganizationsService service
 
 // Organization represents a GitHub organization account.
@@ -58,7 +57,7 @@ func (o Organization) String() string {
 	return Stringify(o)
 }
 
-// Plan represents the payment plan for an account. See plans at https://github.com/plans.
+// Plan represents the payment plan for an account.  See plans at https://github.com/plans.
 type Plan struct {
 	Name          *string `json:"name,omitempty"`
 	Space         *int    `json:"space,omitempty"`
@@ -86,7 +85,7 @@ type OrganizationsListOptions struct {
 // as the opts.Since parameter for the next call.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/#list-all-organizations
-func (s *OrganizationsService) ListAll(ctx context.Context, opt *OrganizationsListOptions) ([]*Organization, *Response, error) {
+func (s *OrganizationsService) ListAll(opt *OrganizationsListOptions) ([]*Organization, *Response, error) {
 	u, err := addOptions("organizations", opt)
 	if err != nil {
 		return nil, nil, err
@@ -98,18 +97,18 @@ func (s *OrganizationsService) ListAll(ctx context.Context, opt *OrganizationsLi
 	}
 
 	orgs := []*Organization{}
-	resp, err := s.client.Do(ctx, req, &orgs)
+	resp, err := s.client.Do(req, &orgs)
 	if err != nil {
 		return nil, resp, err
 	}
-	return orgs, resp, nil
+	return orgs, resp, err
 }
 
-// List the organizations for a user. Passing the empty string will list
+// List the organizations for a user.  Passing the empty string will list
 // organizations for the authenticated user.
 //
-// GitHub API docs: https://developer.github.com/v3/orgs/#list-user-organizations
-func (s *OrganizationsService) List(ctx context.Context, user string, opt *ListOptions) ([]*Organization, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/orgs/#list-user-organizations
+func (s *OrganizationsService) List(user string, opt *ListOptions) ([]*Organization, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/orgs", user)
@@ -126,19 +125,19 @@ func (s *OrganizationsService) List(ctx context.Context, user string, opt *ListO
 		return nil, nil, err
 	}
 
-	var orgs []*Organization
-	resp, err := s.client.Do(ctx, req, &orgs)
+	orgs := new([]*Organization)
+	resp, err := s.client.Do(req, orgs)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return orgs, resp, nil
+	return *orgs, resp, err
 }
 
 // Get fetches an organization by name.
 //
-// GitHub API docs: https://developer.github.com/v3/orgs/#get-an-organization
-func (s *OrganizationsService) Get(ctx context.Context, org string) (*Organization, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/orgs/#get-an-organization
+func (s *OrganizationsService) Get(org string) (*Organization, *Response, error) {
 	u := fmt.Sprintf("orgs/%v", org)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -146,37 +145,18 @@ func (s *OrganizationsService) Get(ctx context.Context, org string) (*Organizati
 	}
 
 	organization := new(Organization)
-	resp, err := s.client.Do(ctx, req, organization)
+	resp, err := s.client.Do(req, organization)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return organization, resp, nil
-}
-
-// GetByID fetches an organization.
-//
-// Note: GetByID uses the undocumented GitHub API endpoint /organizations/:id.
-func (s *OrganizationsService) GetByID(ctx context.Context, id int) (*Organization, *Response, error) {
-	u := fmt.Sprintf("organizations/%d", id)
-	req, err := s.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	organization := new(Organization)
-	resp, err := s.client.Do(ctx, req, organization)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return organization, resp, nil
+	return organization, resp, err
 }
 
 // Edit an organization.
 //
-// GitHub API docs: https://developer.github.com/v3/orgs/#edit-an-organization
-func (s *OrganizationsService) Edit(ctx context.Context, name string, org *Organization) (*Organization, *Response, error) {
+// GitHub API docs: http://developer.github.com/v3/orgs/#edit-an-organization
+func (s *OrganizationsService) Edit(name string, org *Organization) (*Organization, *Response, error) {
 	u := fmt.Sprintf("orgs/%v", name)
 	req, err := s.client.NewRequest("PATCH", u, org)
 	if err != nil {
@@ -184,10 +164,10 @@ func (s *OrganizationsService) Edit(ctx context.Context, name string, org *Organ
 	}
 
 	o := new(Organization)
-	resp, err := s.client.Do(ctx, req, o)
+	resp, err := s.client.Do(req, o)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return o, resp, nil
+	return o, resp, err
 }

@@ -1,127 +1,84 @@
-/*
-Table Account
-accountName
-password
-description
-type
-status
-created
-updated
-
-Table User
-userName
-password
-email
-accountName
-Projects
-status
-created
-updated
-
-Table Project
-projectID
-accountName
-services
-quota
-status
-created
-updated
-
-Table Keys
-key
-secret
-projectID
-created
-status
-
-Table Token
-uid
-token
-expired
-created
- */
 package api
 
 import (
-	"gopkg.in/iris.v4"
 	"github.com/journeymidnight/yig-iam/helper"
 	"github.com/journeymidnight/yig-iam/db"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	"io/ioutil"
+	"net/http"
+	"encoding/json"
+	. "github.com/journeymidnight/yig-iam/error"
 )
 
-func CreateUser(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_CreateUser, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func CreateUser(w http.ResponseWriter, r *http.Request)  {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	realName := tokenRecord.AccountId + ":" + query.UserName
-	err := db.InsertUserRecord(realName, query.Password, ROLE_USER, query.Email, query.DisplayName, tokenRecord.AccountId)
+	err = db.CreateUser(query.UserName, query.Password, ROLE_USER, query.Email, query.DisplayName, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateUser for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed CreateUser",Data:query})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	helper.Enforcer.AddRoleForUser(realName, ROLE_USER)
+	helper.Enforcer.AddRoleForUser(query.UserName, ROLE_USER)
 	helper.Enforcer.SavePolicy()
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func DeleteUser(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeleteUser, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func DeleteUser(w http.ResponseWriter, r *http.Request)  {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	realUserName := tokenRecord.AccountId + ":" + query.UserName
-	err := db.RemoveUserRecord(realUserName, tokenRecord.AccountId)
+	err = db.RemoveUser(query.UserName, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DeleteUser for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DeleteUser",Data:query})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	helper.Enforcer.DeleteRolesForUser(realUserName)
+	helper.Enforcer.DeleteRolesForUser(query.UserName)
 	helper.Enforcer.SavePolicy()
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func DescribeUser(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DescribeUser, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func DescribeUser(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	var err error
-	var record UserRecord
-	if tokenRecord.Type == ROLE_ACCOUNT {
-		record, err = db.DescribeUserRecord(tokenRecord.AccountId + ":" + query.UserName, tokenRecord.AccountId)
-	} else {
-		record, err = db.DescribeUserRecord(tokenRecord.UserName, tokenRecord.AccountId)
-	}
-
+	user, err := db.DescribeUser(query.UserName, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DescribeUsert for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeUser",Data:query})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:record})
+	WriteSuccessResponse(w, EncodeResponse(user))
 	return
 }
 
-func ListUsers(c *iris.Context, query QueryRequest) {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_ListUsers, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	records, err := db.ListUserRecords(tokenRecord.AccountId)
+func ListUsers(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	users, err := db.ListUsers(token.AccountId)
 	if err != nil {
-		helper.Logger.Println(5, "failed search account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed search account",Data:query})
+		helper.Logger.Println(5, "failed ListUsers for account:", token.AccountId)
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:records})
+	WriteSuccessResponse(w, EncodeResponse(users))
 	return
 }

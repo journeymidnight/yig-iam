@@ -1,51 +1,56 @@
 package api
 
 import (
-	"gopkg.in/iris.v4"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/journeymidnight/yig-iam/helper"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	. "github.com/journeymidnight/yig-iam/error"
 	"github.com/journeymidnight/yig-iam/db"
 )
 
-func ConnectService(c *iris.Context, query QueryRequest) {
-	var userName string
-	if query.AccountId != "" {
-		userName = query.AccountId + ":" + query.UserName
-	} else {
-		userName = query.UserName
+func Login(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
 	}
-	helper.Logger.Println(5, "ConnectService user password:", userName, query.Password)
-	record, err := db.ValidUserAndPassword(userName, query.Password)
+
+	user, err := db.ValidateUserAndPassword(query.UserName, query.Password)
 	if err != nil {
 		//retry auth by email
 		if query.Email != "" {
-			helper.Logger.Println(5, "ConnectService user email:", query.Email, query.Password)
-			record, err = db.ValidEmailAndPassword(query.Email, query.Password)
+			user, err = db.ValidateEmailAndPassword(query.Email, query.Password)
 			if err != nil {
-				c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"user name or password incorrect",Data:""})
+				WriteErrorResponse(w, r, ErrUserOrPasswordInvalid)
 				return
 			}
 		}
 	}
 
-	if record.Status == "inactive" {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"your account has been disabled by administrator",Data:""})
+	if user.Status == USER_STATUS_INACTIVE {
+		WriteErrorResponse(w, r, ErrAccountDisabled)
 		return
 	}
 
 	uuid := uuid.New()
 	helper.Logger.Println(5, "ConnectService uuid length:", len(uuid.String()))
-	err = db.InsertTokenRecord(uuid.String(), record.UserName, record.AccountId, record.Type)
+	err = db.CreateToken(uuid.String(), user.UserId, user.UserName, user.AccountId, user.Type)
 	if err != nil {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4000,Message:"InsertTokenRecord error",Data:""})
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	var resp ConnectServiceResponse
+	var resp LoginResponse
 	resp.Token = uuid.String()
-	resp.Type = record.Type
-	resp.AccountId = record.AccountId
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
+	resp.Type = user.Type
+	resp.AccountId = user.AccountId
+	resp.UserId = user.UserId
+
+	WriteSuccessResponse(w, EncodeResponse(resp))
 	return
 
 }

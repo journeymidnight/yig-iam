@@ -1,91 +1,57 @@
-/*
- * Minio Cloud Storage, (C) 2015, 2016 Minio, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package helper
 
-import (
-	"bufio"
-	"bytes"
+import  (
 	"os"
-	"runtime"
-	"runtime/debug"
-	"strconv"
-	"strings"
-	"github.com/journeymidnight/yig-iam/log"
-	"github.com/dustin/go-humanize"
-	)
+	"io"
+	"path/filepath"
+	"fmt"
+	"errors"
+	olog "github.com/sirupsen/logrus"
+)
 
-var Logger *log.Logger
+var Logger *olog.Logger
 
-// sysInfo returns useful system statistics.
-func sysInfo() map[string]string {
-	host, err := os.Hostname()
+var level map[string]olog.Level = map[string]olog.Level{
+	"info" : olog.InfoLevel,
+	"warn" : olog.WarnLevel,
+	"debug" : olog.DebugLevel,
+	"error" : olog.ErrorLevel,
+}
+
+func OpenAccessLogFile () (*os.File, error) {
+	if Config.AccessLog == "" {
+		return nil, errors.New("No access log provided")
+	}
+	filePath := Config.AccessLog
+	dir := filepath.Dir(filePath)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create log path %s: %s", dir, err)
+	}
+
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
 	if err != nil {
-		host = ""
+		return nil, fmt.Errorf("error opening file %s: %s", filePath, err)
 	}
-	memstats := &runtime.MemStats{}
-	runtime.ReadMemStats(memstats)
-	return map[string]string{
-		"host.name":      host,
-		"host.os":        runtime.GOOS,
-		"host.arch":      runtime.GOARCH,
-		"host.lang":      runtime.Version(),
-		"host.cpus":      strconv.Itoa(runtime.NumCPU()),
-		"mem.used":       humanize.Bytes(memstats.Alloc),
-		"mem.total":      humanize.Bytes(memstats.Sys),
-		"mem.heap.used":  humanize.Bytes(memstats.HeapAlloc),
-		"mem.heap.total": humanize.Bytes(memstats.HeapSys),
-	}
+
+	return file, nil
 }
 
-// stackInfo returns printable stack trace.
-func stackInfo() string {
-	// Convert stack-trace bytes to io.Reader.
-	rawStack := bufio.NewReader(bytes.NewBuffer(debug.Stack()))
-	// Skip stack trace lines until our real caller.
-	for i := 0; i <= 4; i++ {
-		rawStack.ReadLine()
+func GetLog() *olog.Logger {
+	var logdst io.Writer
+	if Config.LogPath != "" {
+		logdst, _ = os.OpenFile(Config.LogPath,os.O_APPEND|os.O_RDWR|os.O_CREATE,0644)
+	} else {
+		logdst = os.Stdout
 	}
 
-	// Read the rest of useful stack trace.
-	stackBuf := new(bytes.Buffer)
-	stackBuf.ReadFrom(rawStack)
-
-	// Strip GOPATH of the build system and return.
-	return strings.Replace(stackBuf.String(), "src/", "", -1)
-}
-
-// errorIf synonymous with fatalIf but doesn't exit on error != nil
-func ErrorIf(err error, msg string, data ...interface{}) {
-	if err == nil {
-		return
+	loglevel := Config.LogLevel
+	Logger = olog.New()
+	Logger.Out = logdst
+	if _,exist := level[loglevel];exist {
+		Logger.SetLevel(level[loglevel])
+	}else{
+		panic("wrong default log level")
 	}
-	Logger.Printf(5, msg, data...)
-	Logger.Println(5, "With error: ", err.Error())
-	Logger.Println(5, "System Info: ", sysInfo())
-}
-
-// fatalIf wrapper function which takes error and prints error messages.
-func FatalIf(err error, msg string, data ...interface{}) {
-	if err == nil {
-		return
-	}
-	Logger.Printf(5, msg, data...)
-	Logger.Println(5, "With error: ", err.Error())
-	Logger.Println(5, "System Info: ", sysInfo())
-	Logger.Println(5, "Stack trace: ", stackInfo())
-	os.Exit(1)
+	return Logger
 }

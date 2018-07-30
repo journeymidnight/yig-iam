@@ -47,6 +47,23 @@ type Engine struct {
 	disableGlobalCache bool
 
 	tagHandlers map[string]tagHandler
+
+	engineGroup *EngineGroup
+}
+
+// BufferSize sets buffer size for iterate
+func (engine *Engine) BufferSize(size int) *Session {
+	session := engine.NewSession()
+	session.isAutoClose = true
+	return session.BufferSize(size)
+}
+
+// CondDeleted returns the conditions whether a record is soft deleted.
+func (engine *Engine) CondDeleted(colName string) builder.Cond {
+	if engine.dialect.DBType() == core.MSSQL {
+		return builder.IsNull{colName}
+	}
+	return builder.IsNull{colName}.Or(builder.Eq{colName: zeroTime1})
 }
 
 // ShowSQL show SQL statement or not on logger if log level is great than INFO
@@ -77,6 +94,11 @@ func (engine *Engine) Logger() core.ILogger {
 func (engine *Engine) SetLogger(logger core.ILogger) {
 	engine.logger = logger
 	engine.dialect.SetLogger(logger)
+}
+
+// SetLogLevel sets the logger level
+func (engine *Engine) SetLogLevel(level core.LogLevel) {
+	engine.logger.SetLevel(level)
 }
 
 // SetDisableGlobalCache disable global cache or not
@@ -201,6 +223,11 @@ func (engine *Engine) SetDefaultCacher(cacher core.Cacher) {
 	engine.Cacher = cacher
 }
 
+// GetDefaultCacher returns the default cacher
+func (engine *Engine) GetDefaultCacher() core.Cacher {
+	return engine.Cacher
+}
+
 // NoCache If you has set default cacher, and you want temporilly stop use cache,
 // you can use NoCache()
 func (engine *Engine) NoCache() *Session {
@@ -259,7 +286,6 @@ func (engine *Engine) Close() error {
 func (engine *Engine) Ping() error {
 	session := engine.NewSession()
 	defer session.Close()
-	engine.logger.Infof("PING DATABASE %v", engine.DriverName())
 	return session.Ping()
 }
 
@@ -272,36 +298,6 @@ func (engine *Engine) logSQL(sqlStr string, sqlArgs ...interface{}) {
 			engine.logger.Infof("[SQL] %v", sqlStr)
 		}
 	}
-}
-
-func (engine *Engine) logSQLQueryTime(sqlStr string, args []interface{}, executionBlock func() (*core.Stmt, *core.Rows, error)) (*core.Stmt, *core.Rows, error) {
-	if engine.showSQL && engine.showExecTime {
-		b4ExecTime := time.Now()
-		stmt, res, err := executionBlock()
-		execDuration := time.Since(b4ExecTime)
-		if len(args) > 0 {
-			engine.logger.Infof("[SQL] %s %v - took: %v", sqlStr, args, execDuration)
-		} else {
-			engine.logger.Infof("[SQL] %s - took: %v", sqlStr, execDuration)
-		}
-		return stmt, res, err
-	}
-	return executionBlock()
-}
-
-func (engine *Engine) logSQLExecutionTime(sqlStr string, args []interface{}, executionBlock func() (sql.Result, error)) (sql.Result, error) {
-	if engine.showSQL && engine.showExecTime {
-		b4ExecTime := time.Now()
-		res, err := executionBlock()
-		execDuration := time.Since(b4ExecTime)
-		if len(args) > 0 {
-			engine.logger.Infof("[sql] %s [args] %v - took: %v", sqlStr, args, execDuration)
-		} else {
-			engine.logger.Infof("[sql] %s - took: %v", sqlStr, execDuration)
-		}
-		return res, err
-	}
-	return executionBlock()
 }
 
 // Sql provides raw sql input parameter. When you have a complex SQL statement
@@ -767,6 +763,13 @@ func (engine *Engine) OrderBy(order string) *Session {
 	return session.OrderBy(order)
 }
 
+// Prepare enables prepare statement
+func (engine *Engine) Prepare() *Session {
+	session := engine.NewSession()
+	session.isAutoClose = true
+	return session.Prepare()
+}
+
 // Join the join_operator should be one of INNER, LEFT OUTER, CROSS etc - this will be prepended to JOIN
 func (engine *Engine) Join(joinOperator string, tablename interface{}, condition string, args ...interface{}) *Session {
 	session := engine.NewSession()
@@ -788,7 +791,8 @@ func (engine *Engine) Having(conditions string) *Session {
 	return session.Having(conditions)
 }
 
-func (engine *Engine) unMapType(t reflect.Type) {
+// UnMapType removes the datbase mapper of a type
+func (engine *Engine) UnMapType(t reflect.Type) {
 	engine.mutex.Lock()
 	defer engine.mutex.Unlock()
 	delete(engine.Tables, t)
@@ -945,7 +949,7 @@ func (engine *Engine) mapType(v reflect.Value) (*core.Table, error) {
 					}
 					if pStart > -1 {
 						if !strings.HasSuffix(k, ")") {
-							return nil, errors.New("cannot match ) charactor")
+							return nil, fmt.Errorf("field %s tag %s cannot match ) charactor", col.FieldName, key)
 						}
 
 						ctx.tagName = k[:pStart]
@@ -1215,6 +1219,9 @@ func (engine *Engine) ClearCache(beans ...interface{}) error {
 // table, column, index, unique. but will not delete or change anything.
 // If you change some field, you should change the database manually.
 func (engine *Engine) Sync(beans ...interface{}) error {
+	session := engine.NewSession()
+	defer session.Close()
+
 	for _, bean := range beans {
 		v := rValue(bean)
 		tableName := engine.tbName(v)
@@ -1223,14 +1230,12 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 			return err
 		}
 
-		s := engine.NewSession()
-		defer s.Close()
-		isExist, err := s.Table(bean).isTableExist(tableName)
+		isExist, err := session.Table(bean).isTableExist(tableName)
 		if err != nil {
 			return err
 		}
 		if !isExist {
-			err = engine.CreateTables(bean)
+			err = session.createTable(bean)
 			if err != nil {
 				return err
 			}
@@ -1241,11 +1246,11 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 		  }*/
 		var isEmpty bool
 		if isEmpty {
-			err = engine.DropTables(bean)
+			err = session.dropTable(bean)
 			if err != nil {
 				return err
 			}
-			err = engine.CreateTables(bean)
+			err = session.createTable(bean)
 			if err != nil {
 				return err
 			}
@@ -1256,8 +1261,6 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 					return err
 				}
 				if !isExist {
-					session := engine.NewSession()
-					defer session.Close()
 					if err := session.statement.setRefValue(v); err != nil {
 						return err
 					}
@@ -1269,8 +1272,6 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 			}
 
 			for name, index := range table.Indexes {
-				session := engine.NewSession()
-				defer session.Close()
 				if err := session.statement.setRefValue(v); err != nil {
 					return err
 				}
@@ -1280,8 +1281,6 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 						return err
 					}
 					if !isExist {
-						session := engine.NewSession()
-						defer session.Close()
 						if err := session.statement.setRefValue(v); err != nil {
 							return err
 						}
@@ -1297,8 +1296,6 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 						return err
 					}
 					if !isExist {
-						session := engine.NewSession()
-						defer session.Close()
 						if err := session.statement.setRefValue(v); err != nil {
 							return err
 						}
@@ -1335,7 +1332,7 @@ func (engine *Engine) CreateTables(beans ...interface{}) error {
 	}
 
 	for _, bean := range beans {
-		err = session.CreateTable(bean)
+		err = session.createTable(bean)
 		if err != nil {
 			session.Rollback()
 			return err
@@ -1355,7 +1352,7 @@ func (engine *Engine) DropTables(beans ...interface{}) error {
 	}
 
 	for _, bean := range beans {
-		err = session.DropTable(bean)
+		err = session.dropTable(bean)
 		if err != nil {
 			session.Rollback()
 			return err
@@ -1379,17 +1376,24 @@ func (engine *Engine) Exec(sql string, args ...interface{}) (sql.Result, error) 
 }
 
 // Query a raw sql and return records as []map[string][]byte
-func (engine *Engine) Query(sql string, paramStr ...interface{}) (resultsSlice []map[string][]byte, err error) {
+func (engine *Engine) Query(sqlorArgs ...interface{}) (resultsSlice []map[string][]byte, err error) {
 	session := engine.NewSession()
 	defer session.Close()
-	return session.Query(sql, paramStr...)
+	return session.Query(sqlorArgs...)
 }
 
 // QueryString runs a raw sql and return records as []map[string]string
-func (engine *Engine) QueryString(sqlStr string, args ...interface{}) ([]map[string]string, error) {
+func (engine *Engine) QueryString(sqlorArgs ...interface{}) ([]map[string]string, error) {
 	session := engine.NewSession()
 	defer session.Close()
-	return session.QueryString(sqlStr, args...)
+	return session.QueryString(sqlorArgs...)
+}
+
+// QueryInterface runs a raw sql and return records as []map[string]interface{}
+func (engine *Engine) QueryInterface(sqlorArgs ...interface{}) ([]map[string]interface{}, error) {
+	session := engine.NewSession()
+	defer session.Close()
+	return session.QueryInterface(sqlorArgs...)
 }
 
 // Insert one or more records
@@ -1465,10 +1469,10 @@ func (engine *Engine) Rows(bean interface{}) (*Rows, error) {
 }
 
 // Count counts the records. bean's non-empty fields are conditions.
-func (engine *Engine) Count(bean interface{}) (int64, error) {
+func (engine *Engine) Count(bean ...interface{}) (int64, error) {
 	session := engine.NewSession()
 	defer session.Close()
-	return session.Count(bean)
+	return session.Count(bean...)
 }
 
 // Sum sum the records by some column. bean's non-empty fields are conditions.
@@ -1547,10 +1551,14 @@ func (engine *Engine) Import(r io.Reader) ([]sql.Result, error) {
 	return results, lastError
 }
 
-// NowTime2 return current time
-func (engine *Engine) NowTime2(sqlTypeName string) (interface{}, time.Time) {
+// nowTime return current time
+func (engine *Engine) nowTime(col *core.Column) (interface{}, time.Time) {
 	t := time.Now()
-	return engine.formatTime(sqlTypeName, t.In(engine.DatabaseTZ)), t.In(engine.TZLocation)
+	var tz = engine.DatabaseTZ
+	if !col.DisableTimeZone && col.TimeZone != nil {
+		tz = col.TimeZone
+	}
+	return engine.formatTime(col.SQLType.Name, t.In(tz)), t.In(engine.TZLocation)
 }
 
 func (engine *Engine) formatColTime(col *core.Column, t time.Time) (v interface{}) {
@@ -1591,17 +1599,39 @@ func (engine *Engine) formatTime(sqlTypeName string, t time.Time) (v interface{}
 	return
 }
 
+// GetColumnMapper returns the column name mapper
+func (engine *Engine) GetColumnMapper() core.IMapper {
+	return engine.ColumnMapper
+}
+
+// GetTableMapper returns the table name mapper
+func (engine *Engine) GetTableMapper() core.IMapper {
+	return engine.TableMapper
+}
+
+// GetTZLocation returns time zone of the application
+func (engine *Engine) GetTZLocation() *time.Location {
+	return engine.TZLocation
+}
+
+// SetTZLocation sets time zone of the application
+func (engine *Engine) SetTZLocation(tz *time.Location) {
+	engine.TZLocation = tz
+}
+
+// GetTZDatabase returns time zone of the database
+func (engine *Engine) GetTZDatabase() *time.Location {
+	return engine.DatabaseTZ
+}
+
+// SetTZDatabase sets time zone of the database
+func (engine *Engine) SetTZDatabase(tz *time.Location) {
+	engine.DatabaseTZ = tz
+}
+
 // Unscoped always disable struct tag "deleted"
 func (engine *Engine) Unscoped() *Session {
 	session := engine.NewSession()
 	session.isAutoClose = true
 	return session.Unscoped()
-}
-
-// CondDeleted returns the conditions whether a record is soft deleted.
-func (engine *Engine) CondDeleted(colName string) builder.Cond {
-	if engine.dialect.DBType() == core.MSSQL {
-		return builder.IsNull{colName}
-	}
-	return builder.IsNull{colName}.Or(builder.Eq{colName: zeroTime1})
 }

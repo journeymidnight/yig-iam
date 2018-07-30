@@ -1,25 +1,27 @@
 package api
 
 import (
-	"gopkg.in/iris.v4"
+	"net/http"
 	"github.com/journeymidnight/yig-iam/helper"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 	"github.com/journeymidnight/yig-iam/db"
+	. "github.com/journeymidnight/yig-iam/error"
+	"io/ioutil"
+	"encoding/json"
 )
 
-func CreateAccount(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	helper.Logger.Println(5, "CreateAccount", tokenRecord.UserName)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_CreateAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
+func CreateAccount(w http.ResponseWriter, r *http.Request)  {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
 	var accountId []byte
 	loop := 0
 	for loop < 3 {
-		helper.Logger.Println(5, "CreateAccount ENTER LOOP")
 		accountId = helper.GenerateRandomNumberId()
-		helper.Logger.Println(5, "CreateAccount ENTER LOOP", string(accountId))
 		exist, err := db.CheckAccountIdExist(string(accountId))
 		helper.Logger.Println(5, "CreateAccount ENTER LOOP1 ", exist, err)
 		if exist == false && err == nil{
@@ -29,108 +31,105 @@ func CreateAccount(c *iris.Context, query QueryRequest)  {
 	}
 	helper.Logger.Println(5, "CreateAccount OUT LOOP", loop)
 	if loop >= 3 {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed create account",Data:query})
+		WriteErrorResponse(w, r, ErrInternalError)
 		return
 	}
 
-	err := db.InsertUserRecord(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, string(accountId))
+	err = db.CreateUser(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, string(accountId))
 	if err != nil {
-		helper.Logger.Println(5, "failed create account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed create account:" + err.Error(),Data:query})
+		WriteErrorResponse(w, r, ErrInternalError)
 		return
 	}
 	helper.Enforcer.AddRoleForUser(query.UserName, ROLE_ACCOUNT)
 	helper.Enforcer.SavePolicy()
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func DeleteAccount(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeleteAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	record, err := db.DescribeAccount(query.AccountId)
+func DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	//token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
 	if err != nil {
-		helper.Logger.Println(5, "failed search account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed search account",Data:query})
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
 
-	err = db.RemoveAccountId(query.AccountId)
+	err = db.DeleteAccount(query.UserName)
 	if err != nil {
-		helper.Logger.Println(5, "failed delete account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed delete account",Data:query})
+		helper.Logger.Errorln("failed delete account for query:", query)
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	helper.Logger.Println(5, "DeleteAccount:", query.UserName)
-	helper.Enforcer.DeleteRolesForUser(record.UserName)
+	helper.Logger.Infoln("DeleteAccount:", query.UserName)
+	helper.Enforcer.DeleteRolesForUser(query.UserName)
 	helper.Enforcer.SavePolicy()
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func DeactivateAccount(c *iris.Context, query QueryRequest) {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DeactivateAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	err := db.DeactivateAccount(query.AccountId)
+func DeactivateAccount(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
 	if err != nil {
-		helper.Logger.Println(5, "failed deactivate account: ", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed to deactivate account, maybe user doesnot exist or deactivate failed",Data:query})
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	err = db.DeactivateAccount(query.UserName)
+	if err != nil {
+		helper.Logger.Errorln("failed deactivate account: ", query)
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func ActivateAccount(c *iris.Context, query QueryRequest) {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_ActivateAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	err := db.ActivateAccount(query.AccountId)
+func ActivateAccount(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
 	if err != nil {
-		helper.Logger.Println(5, "failed deactivate account: ", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed to activate account, maybe user doesnot exist or deactivate failed",Data:query})
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:""})
+	err = db.ActivateAccount(query.UserName)
+	if err != nil {
+		helper.Logger.Errorln("failed deactivate account: ", query)
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	WriteSuccessResponse(w, nil)
 	return
 }
 
-func DescribeAccount(c *iris.Context, query QueryRequest) {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DescribeAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	record, err := db.DescribeAccount(query.AccountId)
+func DescribeAccount(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
 	if err != nil {
-		helper.Logger.Println(5, "failed search account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed search account",Data:query})
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:record})
+	account, err := db.DescribeAccount(query.UserName)
+	if err != nil {
+		helper.Logger.Errorln("failed search account for query:", query)
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	WriteSuccessResponse(w, EncodeResponse(account))
 	return
 }
 
-func ListAccounts(c *iris.Context, query QueryRequest)  {
-	tokenRecord := c.Get("token").(TokenRecord)
-	if helper.Enforcer.Enforce(tokenRecord.UserName, API_DescribeAccount, ACT_ACCESS) != true {
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4030,Message:"You do not have permission to perform", Data:query})
-		return
-	}
-	records, err := db.ListAccountRecords()
+func ListAccounts(w http.ResponseWriter, r *http.Request)  {
+	accounts, err := db.ListAccounts()
 	if err != nil {
-		helper.Logger.Println(5, "failed search account for query:", query)
-		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed search account",Data:query})
+		helper.Logger.Errorln("failed list accounts", err.Error())
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:records})
+	WriteSuccessResponse(w, EncodeResponse(accounts))
 	return
 }

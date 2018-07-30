@@ -15,7 +15,8 @@ package blackfriday
 
 import (
 	"bytes"
-	"unicode"
+
+	"github.com/shurcooL/sanitized_anchor_name"
 )
 
 // Parse block-level data.
@@ -101,7 +102,7 @@ func (p *parser) block(out *bytes.Buffer, data []byte) {
 		// }
 		// ```
 		if p.flags&EXTENSION_FENCED_CODE != 0 {
-			if i := p.fencedCodeBlock(out, data, true); i > 0 {
+			if i := p.fencedCode(out, data, true); i > 0 {
 				data = data[i:]
 				continue
 			}
@@ -242,7 +243,7 @@ func (p *parser) prefixHeader(out *bytes.Buffer, data []byte) int {
 	}
 	if end > i {
 		if id == "" && p.flags&EXTENSION_AUTO_HEADER_IDS != 0 {
-			id = SanitizedAnchorName(string(data[i:end]))
+			id = sanitized_anchor_name.Create(string(data[i:end]))
 		}
 		work := func() bool {
 			p.inline(out, data[i:end])
@@ -514,7 +515,7 @@ func (p *parser) htmlFindEnd(tag string, data []byte) int {
 	return i + skip
 }
 
-func (*parser) isEmpty(data []byte) int {
+func (p *parser) isEmpty(data []byte) int {
 	// it is okay to call isEmpty on an empty buffer
 	if len(data) == 0 {
 		return 0
@@ -529,7 +530,7 @@ func (*parser) isEmpty(data []byte) int {
 	return i + 1
 }
 
-func (*parser) isHRule(data []byte) bool {
+func (p *parser) isHRule(data []byte) bool {
 	i := 0
 
 	// skip up to three spaces
@@ -558,24 +559,21 @@ func (*parser) isHRule(data []byte) bool {
 	return n >= 3
 }
 
-// isFenceLine checks if there's a fence line (e.g., ``` or ``` go) at the beginning of data,
-// and returns the end index if so, or 0 otherwise. It also returns the marker found.
-// If syntax is not nil, it gets set to the syntax specified in the fence line.
-// A final newline is mandatory to recognize the fence line, unless newlineOptional is true.
-func isFenceLine(data []byte, syntax *string, oldmarker string, newlineOptional bool) (end int, marker string) {
+func (p *parser) isFencedCode(data []byte, syntax **string, oldmarker string) (skip int, marker string) {
 	i, size := 0, 0
+	skip = 0
 
 	// skip up to three spaces
 	for i < len(data) && i < 3 && data[i] == ' ' {
 		i++
 	}
+	if i >= len(data) {
+		return
+	}
 
 	// check for the marker characters: ~ or `
-	if i >= len(data) {
-		return 0, ""
-	}
 	if data[i] != '~' && data[i] != '`' {
-		return 0, ""
+		return
 	}
 
 	c := data[i]
@@ -586,28 +584,27 @@ func isFenceLine(data []byte, syntax *string, oldmarker string, newlineOptional 
 		i++
 	}
 
+	if i >= len(data) {
+		return
+	}
+
 	// the marker char must occur at least 3 times
 	if size < 3 {
-		return 0, ""
+		return
 	}
 	marker = string(data[i-size : i])
 
 	// if this is the end marker, it must match the beginning marker
 	if oldmarker != "" && marker != oldmarker {
-		return 0, ""
+		return
 	}
 
-	// TODO(shurcooL): It's probably a good idea to simplify the 2 code paths here
-	// into one, always get the syntax, and discard it if the caller doesn't care.
 	if syntax != nil {
 		syn := 0
 		i = skipChar(data, i, ' ')
 
 		if i >= len(data) {
-			if newlineOptional && i == len(data) {
-				return i, marker
-			}
-			return 0, ""
+			return
 		}
 
 		syntaxStart := i
@@ -622,7 +619,7 @@ func isFenceLine(data []byte, syntax *string, oldmarker string, newlineOptional 
 			}
 
 			if i >= len(data) || data[i] != '}' {
-				return 0, ""
+				return
 			}
 
 			// strip all whitespace at the beginning and the end
@@ -644,26 +641,22 @@ func isFenceLine(data []byte, syntax *string, oldmarker string, newlineOptional 
 			}
 		}
 
-		*syntax = string(data[syntaxStart : syntaxStart+syn])
+		language := string(data[syntaxStart : syntaxStart+syn])
+		*syntax = &language
 	}
 
 	i = skipChar(data, i, ' ')
 	if i >= len(data) || data[i] != '\n' {
-		if newlineOptional && i == len(data) {
-			return i, marker
-		}
-		return 0, ""
+		return
 	}
 
-	return i + 1, marker // Take newline into account.
+	skip = i + 1
+	return
 }
 
-// fencedCodeBlock returns the end index if data contains a fenced code block at the beginning,
-// or 0 otherwise. It writes to out if doRender is true, otherwise it has no side effects.
-// If doRender is true, a final newline is mandatory to recognize the fenced code block.
-func (p *parser) fencedCodeBlock(out *bytes.Buffer, data []byte, doRender bool) int {
-	var syntax string
-	beg, marker := isFenceLine(data, &syntax, "", false)
+func (p *parser) fencedCode(out *bytes.Buffer, data []byte, doRender bool) int {
+	var lang *string
+	beg, marker := p.isFencedCode(data, &lang, "")
 	if beg == 0 || beg >= len(data) {
 		return 0
 	}
@@ -674,8 +667,7 @@ func (p *parser) fencedCodeBlock(out *bytes.Buffer, data []byte, doRender bool) 
 		// safe to assume beg < len(data)
 
 		// check for the end of the code block
-		newlineOptional := !doRender
-		fenceEnd, _ := isFenceLine(data[beg:], nil, marker, newlineOptional)
+		fenceEnd, _ := p.isFencedCode(data[beg:], nil, marker)
 		if fenceEnd != 0 {
 			beg += fenceEnd
 			break
@@ -694,6 +686,11 @@ func (p *parser) fencedCodeBlock(out *bytes.Buffer, data []byte, doRender bool) 
 			work.Write(data[beg:end])
 		}
 		beg = end
+	}
+
+	syntax := ""
+	if lang != nil {
+		syntax = *lang
 	}
 
 	if doRender {
@@ -937,7 +934,7 @@ func (p *parser) quote(out *bytes.Buffer, data []byte) int {
 		// irregardless of any contents inside it
 		for data[end] != '\n' {
 			if p.flags&EXTENSION_FENCED_CODE != 0 {
-				if i := p.fencedCodeBlock(out, data[end:], false); i > 0 {
+				if i := p.fencedCode(out, data[end:], false); i > 0 {
 					// -1 to compensate for the extra end++ after the loop:
 					end += i - 1
 					break
@@ -1243,12 +1240,6 @@ gatherlines:
 		line = i
 	}
 
-	// If reached end of data, the Renderer.ListItem call we're going to make below
-	// is definitely the last in the list.
-	if line >= len(data) {
-		*flags |= LIST_ITEM_END_OF_LIST
-	}
-
 	rawBytes := raw.Bytes()
 
 	// render the contents of the list item
@@ -1363,7 +1354,7 @@ func (p *parser) paragraph(out *bytes.Buffer, data []byte) int {
 
 				id := ""
 				if p.flags&EXTENSION_AUTO_HEADER_IDS != 0 {
-					id = SanitizedAnchorName(string(data[prev:eol]))
+					id = sanitized_anchor_name.Create(string(data[prev:eol]))
 				}
 
 				p.r.Header(out, work, level, id)
@@ -1393,7 +1384,7 @@ func (p *parser) paragraph(out *bytes.Buffer, data []byte) int {
 
 		// if there's a fenced code block, paragraph is over
 		if p.flags&EXTENSION_FENCED_CODE != 0 {
-			if p.fencedCodeBlock(out, current, false) > 0 {
+			if p.fencedCode(out, current, false) > 0 {
 				p.renderParagraph(out, data[:i])
 				return i
 			}
@@ -1426,25 +1417,4 @@ func (p *parser) paragraph(out *bytes.Buffer, data []byte) int {
 
 	p.renderParagraph(out, data[:i])
 	return i
-}
-
-// SanitizedAnchorName returns a sanitized anchor name for the given text.
-//
-// It implements the algorithm specified in the package comment.
-func SanitizedAnchorName(text string) string {
-	var anchorName []rune
-	futureDash := false
-	for _, r := range text {
-		switch {
-		case unicode.IsLetter(r) || unicode.IsNumber(r):
-			if futureDash && len(anchorName) > 0 {
-				anchorName = append(anchorName, '-')
-			}
-			futureDash = false
-			anchorName = append(anchorName, unicode.ToLower(r))
-		default:
-			futureDash = true
-		}
-	}
-	return string(anchorName)
 }

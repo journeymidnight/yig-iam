@@ -1,539 +1,723 @@
 package db
 
 import (
-	"database/sql"
-	"fmt"
+	"github.com/go-xorm/xorm"
 	_ "github.com/go-sql-driver/mysql"
 	"time"
 	"github.com/journeymidnight/yig-iam/helper"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
+	. "github.com/journeymidnight/yig-iam/error"
+	"errors"
+	"fmt"
 )
 
-var Db *sql.DB
-
-const (
-	User_TYPE_ADMIN	= 0
-	User_TYPE_ACCOUNT = 1
-	User_TYPE_USER	= 2
-)
+var engine *xorm.Engine
 
 const TimeFormat = "2006-01-02T15:04:05Z07:00"
-func CreateDbConnection() *sql.DB {
-	conn, err := sql.Open("mysql", helper.CONFIG.DatabaseConnectionString)
+
+func Db_Init() {
+	var err error
+	engine, err = xorm.NewEngine("mysql", helper.Config.UserDataSource)
 	if err != nil {
-		panic(fmt.Sprintf("Error connecting to database: %v", err))
+		helper.Logger.Errorln(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource))
+		panic(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource))
 	}
-	helper.Logger.Println(5, "Connected to database")
-	return conn
+	_, err = engine.Exec("CREATE DATABASE IF NOT EXISTS yig_iam")
+	if err != nil {
+		helper.Logger.Errorln("Create yig_iam failed")
+		panic("fatal error: Create yig_iam failed")
+	}
+	engine, err = xorm.NewEngine("mysql", helper.Config.UserDataSource+"yig_iam")
+	if err != nil {
+		helper.Logger.Errorln(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
+		panic(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
+	}
+	engine.ShowSQL(true)
 }
 
-func checkDbTables() {
+func Engine() *xorm.Engine {
+	if engine == nil {
+		Db_Init()
+		engine.ShowSQL(true)
+	}
+	return engine
+}
+
+func DeleteAccount(userName string) error {
+	//_, err := Db.Exec("delete from User where accountId=(?) and type='ACCOUNT'", AccountId)
+	var user User
+	user.UserName = userName
+	user.Type = ROLE_ACCOUNT
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe account", userName, err.Error())
+		return err
+	}
+	if has == false {
+		return ErrDbRecordNotFound
+	}
+
+	session := Engine().NewSession()
+	defer session.Close()
+	err = session.Begin()
+
+	affected, err := session.Delete(&User{AccountId:user.AccountId})
+	if err != nil {
+		helper.Logger.Errorln("Error delete all users for account:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+	helper.Logger.Debugln("delete all users for account:", userName, affected, err.Error())
+
+	affected, err = session.Delete(&UserProject{AccountId:user.AccountId})
+	if err != nil {
+		helper.Logger.Errorln("Error delete all user-project for account:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+	helper.Logger.Debugln("delete all user-project for account:", userName, affected, err.Error())
+
+	affected, err = Engine().Update(&Project{Status:PROJECT_STATUS_DELETED}, &Project{AccountId:user.AccountId})
+	if err != nil {
+		helper.Logger.Errorln("Error mark all projects deleted for account:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+	helper.Logger.Debugln("mark all projects deleted for account:", userName, affected, err.Error())
+
+	err = session.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DescribeAccount(userName string) (user User, err error) {
+	user.UserName = userName
+	user.Type = ROLE_ACCOUNT
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe account", userName, err.Error())
+		return user, err
+	}
+	if has {
+		return user, nil
+	} else {
+		return user, ErrDbRecordNotFound
+	}
+}
+
+func DeactivateAccount(userName string) (error) {
+	var user User
+	user.UserName = userName
+	user.Type = ROLE_ACCOUNT
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe account", userName, err.Error())
+		return err
+	}
+	if has == false {
+		return ErrDbRecordNotFound
+	}
+
+	affected, err := Engine().Update(&UserProject{Status:KEY_STATUS_DISABLE}, &UserProject{AccountId:user.AccountId})
+	//_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
+	if err != nil {
+		helper.Logger.Errorln("Error deactivate account", userName, err.Error())
+		return err
+	}
+	helper.Logger.Debugln("mark all key status disable for account:", userName, affected, err.Error())
+	return nil
+}
+
+func ActivateAccount(userName string) (error) {
+	var user User
+	user.UserName = userName
+	user.Type = ROLE_ACCOUNT
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe account", userName, err.Error())
+		return err
+	}
+	if has == false {
+		return ErrDbRecordNotFound
+	}
+
+	affected, err := Engine().Update(&UserProject{Status:KEY_STATUS_ENABLE}, &UserProject{AccountId:user.AccountId})
+	//_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
+	if err != nil {
+		helper.Logger.Errorln("Error activate account", userName, err.Error())
+		return err
+	}
+	helper.Logger.Debugln("mark all key status enable for account:", userName, affected, err.Error())
+	return nil
+}
+
+func ListAccounts() ([]User, error) {
+	users := make([]User, 0)
+	err := Engine().Where("Type = ?", ROLE_ACCOUNT).Find(&users)
+	if err != nil {
+		helper.Logger.Errorln("Error querying idle executors: ", err)
+		return nil, err
+	}
+	return users, nil
+}
+
+func CreateUser(userName string, password string, accountType string,
+			email string, displayName string, accountId string) error {
+	session := Engine().NewSession()
+	defer session.Close()
+	err := session.Begin()
+
+	var user User
+	user.UserName = userName
+	user.Password = password
+	user.AccountId = accountId
+	user.DisplayName = displayName
+	user.Type = accountType
+	user.Email = email
+	user.UserId = "u-" + string(helper.GenerateRandomId())
+	user.Status = USER_STATUS_ACTIVE
+
+	_, err = session.Insert(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error create user", userName, accountType, accountId, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	var p Project
+	projectId := "p-" + string(helper.GenerateRandomId())
+	p.ProjectId = projectId
+	p.ProjectName = "Private"
+	p.ProjectType = PRIVATE_PROJECT
+	p.AccountId = accountId
+	p.Description = fmt.Sprintf("own by %s", userName)
+	_, err = session.Insert(&p)
+	if err != nil {
+		helper.Logger.Errorln("Error create private project", projectId, userName, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	var up UserProject
+	ak, sk := helper.GenerateKey()
+	up.AccessKey = string(ak)
+	up.AccessSecret = string(sk)
+	up.UserId = user.UserId
+	up.ProjectId = p.ProjectId
+	up.AccountId = accountId
+	up.Acl = ACL_RW
+	_, err = session.Insert(&up)
+	if err != nil {
+		helper.Logger.Errorln("Error create user-project", projectId, up.UserId, accountId, up.Acl, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	err = session.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RemoveUser(userName string, accountId string) error {
+	var user User
+	user.UserName = userName
+	user.AccountId = accountId
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe user", userName, err.Error())
+		return err
+	}
+	if has == false {
+		return errors.New("user not existed")
+	}
+
+	session := Engine().NewSession()
+	defer session.Close()
+	err = session.Begin()
+
+	_, err = session.Delete(&user)
+	if err != nil{
+		helper.Logger.Errorln("Error remove user:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	var up UserProject
+	up.UserId = user.UserId
+	_, err = session.Delete(&up)
+	if err != nil{
+		helper.Logger.Errorln("Error remove user-project:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	var p Project
+	p.Status = PROJECT_STATUS_DELETED
+	_, err = session.Update(&p, &Project{OwnerId:user.UserId})
+	if err != nil{
+		helper.Logger.Errorln("Error remove user-project:", userName, err.Error())
+		session.Rollback()
+		return err
+	}
+	err = session.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DescribeUser(userName string, accountId string) (user User, err error) {
+	user.UserName = userName
+	user.AccountId = accountId
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error describe user", userName, err.Error())
+		return user, err
+	}
+	if has {
+		return user, nil
+	} else {
+		return user, ErrDbRecordNotFound
+	}
+}
+
+func ValidateEmailAndPassword(email, password string) (user User, err error) {
+	user.Email = email
+	user.Password = password
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error validate user", email, password, err.Error())
+		return user, err
+	}
+	if has {
+		return user, nil
+	} else {
+		return user, ErrDbRecordNotFound
+	}
+}
+
+func ValidateUserAndPassword(userName string, password string) (user User, err error) {
+	user.UserName = userName
+	user.Password = password
+	has, err := Engine().Get(&user)
+	if err != nil {
+		helper.Logger.Errorln("Error validate user", userName, password, err.Error())
+		return user, err
+	}
+	if has {
+		return user, nil
+	} else {
+		return user, ErrDbRecordNotFound
+	}
+}
+
+func ListUsers(accountId string) (users []User, err error) {
+	err = Engine().Where("accountId = ? AND type = ?", accountId, ROLE_USER).Find(&users)
+	if err != nil {
+		helper.Logger.Errorln("Error list users", accountId, ROLE_USER, err.Error())
+	}
 	return
 }
 
-func RemoveAccountId(AccountId string) error {
-	_, err := Db.Exec("delete from User where accountId=(?) and type='ACCOUNT'", AccountId)
+func CreateProject(projectName, projectType, accountId, description string) error {
+	projectId := "p-" + string(helper.GenerateRandomId())
+	session := Engine().NewSession()
+	defer session.Close()
+	err := session.Begin()
+
+	var p Project
+	p.ProjectId = projectId
+	p.ProjectName = projectName
+	p.ProjectType = projectType
+	p.AccountId = accountId
+	p.Description = description
+	_, err = session.Insert(&p)
 	if err != nil {
-		helper.Logger.Println(5, "Error remove account", AccountId, err.Error())
+		helper.Logger.Errorln("Error create project", projectId, projectName, accountId, projectType, err.Error())
+		session.Rollback()
+		return err
 	}
-	helper.Logger.Println(5, "DeleteAccount:", err)
+	var up UserProject
+	ak, sk := helper.GenerateKey()
+	up.AccessKey = string(ak)
+	up.AccessSecret = string(sk)
+	up.UserId = accountId
+	up.ProjectId = projectId
+	up.Acl = ACL_RW
+	_, err = session.Insert(&up)
+	if err != nil {
+		helper.Logger.Errorln("Error create user-project", projectId, projectName, accountId, projectType, err.Error())
+		session.Rollback()
+		return err
+	}
+
+	err = session.Commit()
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
-func DescribeAccount(AccountId string) (UserRecord, error) {
-	var record UserRecord
-	 err := Db.QueryRow("select * from User where accountId=(?) and type='ACCOUNT'", AccountId).Scan(
-		&record.UserName,
-		&record.Password,
-		&record.Type,
-		&record.Email,
-		&record.DisplayName,
-		&record.AccountId,
-		&record.Status,
-		&record.Created,
-		&record.Updated)
-	record.Password = ""
-	return record, err
-}
-
-func DeactivateAccount(AccountId string) (error) {
-	_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
-	return err
-}
-
-func ActivateAccount(AccountId string) (error) {
-	_, err := Db.Exec("update User set status='active' where accountId=(?) and type='ACCOUNT'", AccountId)
-	return err
-}
-
-func ListAccountRecords() ([]UserRecord, error) {
-	var records []UserRecord
-	rows, err := Db.Query("select * from User where type=(?)", ROLE_ACCOUNT)
+func RemoveProject(projectId string, accountId string) error {
+	target := &Project{ProjectId:projectId}
+	has, err := Engine().Get(target)
 	if err != nil {
-		helper.Logger.Println(5, "Error querying idle executors: ", err)
-		return records, err
+		return err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var record UserRecord
-		if err := rows.Scan(
-			&record.UserName,
-			&record.Password,
-			&record.Type,
-			&record.Email,
-			&record.DisplayName,
-			&record.AccountId,
-			&record.Status,
-			&record.Created,
-			&record.Updated); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		record.Password = ""
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
-}
 
-func InsertUserRecord(userName string, password string, accountType string,
-			email string, displayName string, accountId string) error {
-	status := "active"
-	created := time.Now().Format(TimeFormat)
-	updated := created
-	_, err := Db.Exec("insert into User values( ?, ?, ?, ?, ?, ?, ?, ?, ? )", userName, password, accountType,
-		email, displayName, accountId, status, created, updated)
+	if has == false {
+		return ErrDbRecordNotFound
+	}
+
+	if target.AccountId != accountId {
+		return ErrNotAuthorised
+	}
+
+	session := Engine().NewSession()
+	defer session.Close()
+	err = session.Begin()
+	p := Project{Status:PROJECT_STATUS_DELETED}
+	_, err = session.Update(&p, &Project{ProjectId:projectId})
 	if err != nil {
-		helper.Logger.Println(5, "Error add account", userName, password, accountType,
-			email, displayName, accountId, status, created, updated, err.Error())
+		session.Rollback()
+		return err
 	}
-	return err
-}
 
-func RemoveUserRecord(userName string, accountId string) error {
-	_, err := Db.Exec("delete from User where userName=(?) and accountId=(?)", userName, accountId)
+	up := UserProject{ProjectId:projectId}
+	_, err = session.Delete(&up)
 	if err != nil {
-		helper.Logger.Println(5, "Error remove user", userName, err.Error())
+		session.Rollback()
+		return err
 	}
-	return err
-}
 
-func DescribeUserRecord(userName string, accountId string) (UserRecord, error) {
-	var record UserRecord
-	err := Db.QueryRow("select * from User where userName=(?) and accountId=(?)", userName, accountId).Scan(&record.UserName,
-		&record.Password,
-		&record.Type,
-		&record.Email,
-		&record.DisplayName,
-		&record.AccountId,
-		&record.Status,
-		&record.Created,
-		&record.Updated)
-	record.Password = ""
-	return record, err
-}
-
-func ValidEmailAndPassword(email, password string) (UserRecord, error) {
-	var record UserRecord
-	err := Db.QueryRow("select * from User where email=(?) and password=(?)", email, password).Scan(
-		&record.UserName,
-		&record.Password,
-		&record.Type,
-		&record.Email,
-		&record.DisplayName,
-		&record.AccountId,
-		&record.Status,
-		&record.Created,
-		&record.Updated)
-	record.Password = ""
-	return record, err
-}
-
-func ValidUserAndPassword(userName string, password string) (UserRecord, error) {
-	var record UserRecord
-	err := Db.QueryRow("select * from User where userName=(?) and password=(?)", userName, password).Scan(
-		&record.UserName,
-		&record.Password,
-		&record.Type,
-		&record.Email,
-		&record.DisplayName,
-		&record.AccountId,
-		&record.Status,
-		&record.Created,
-		&record.Updated)
-	record.Password = ""
-	return record, err
-}
-
-func ListUserRecords(accountId string) ([]UserRecord, error) {
-	var records []UserRecord
-	rows, err := Db.Query("select * from User where accountId=(?) and type=(?)", accountId, ROLE_USER)
+	err = session.Commit()
 	if err != nil {
-		helper.Logger.Println(5, "Error querying idle executors: ", err)
-		return records, err
+		return err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var record UserRecord
-		if err := rows.Scan(
-			&record.UserName,
-			&record.Password,
-			&record.Type,
-			&record.Email,
-			&record.DisplayName,
-			&record.AccountId,
-			&record.Status,
-			&record.Created,
-			&record.Updated); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		record.Password = ""
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
+	return nil
 }
 
-func InsertProjectRecord(ProjectId string, ProjectName string, AccountId string, Description string) error {
-	status := "active"
-	created := time.Now().Format(TimeFormat)
-	updated := created
-	_, err := Db.Exec("insert into Project values( ?, ?, ?, ?, ?, ?, ? )", ProjectId, ProjectName, AccountId, Description, status, created, updated)
+func DescribeProject(projectId string, accountId string) (p Project, err error) {
+	p.ProjectId = projectId
+	p.AccountId = accountId
+	has, err := Engine().Get(&p)
 	if err != nil {
-		helper.Logger.Println(5, "Error add project", ProjectId, ProjectName, AccountId, Description, status, created, updated, err.Error())
+		helper.Logger.Errorln("Error describe project:", projectId, err.Error())
+		return p, err
 	}
-	return err
-}
-
-func RemoveProjectRecord(ProjectId string, AccountId string) error {
-	_, err := Db.Exec("delete from Project where projectId=(?) and accountId=(?)", ProjectId, AccountId)
-	if err != nil {
-		helper.Logger.Println(5, "Error remove user", ProjectId, err.Error())
-	}
-	return err
-}
-
-func DescribeProjectRecord(ProjectId string, AccountId string) (ProjectRecord, error) {
-	var record ProjectRecord
-	err := Db.QueryRow("select * from Project where projectId=(?) and accountId=(?)", ProjectId, AccountId).Scan(&record.ProjectId,
-		&record.ProjectName,
-		&record.AccountId,
-		&record.Description,
-		&record.Status,
-		&record.Created,
-		&record.Updated)
-	return record, err
-}
-
-func ListProjectRecords(accountId string) ([]ProjectRecord, error) {
-	var records []ProjectRecord
-	rows, err := Db.Query("select * from Project where accountId=(?)", accountId)
-	if err != nil {
-		helper.Logger.Println(5, "Error querying idle executors: ", err)
-		return records, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var record ProjectRecord
-		if err := rows.Scan(
-			&record.ProjectId,
-			&record.ProjectName,
-			&record.AccountId,
-			&record.Description,
-			&record.Status,
-			&record.Created,
-			&record.Updated); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
-}
-
-func InsertUserProjectRecord(ProjectId string, UserName string) error {
-	created := time.Now().Format(TimeFormat)
-	_, err := Db.Exec("insert into UserProject values( null, ?, ?, ? )", ProjectId, UserName, created)
-	if err != nil {
-		helper.Logger.Println(5, "Error add project", ProjectId, UserName, created, err.Error())
-	}
-	return err
-}
-
-func RemoveUserProjectRecord(ProjectId string, UserName string) error {
-	_, err := Db.Exec("delete from UserProject where projectId=(?) and userName=(?)", ProjectId, UserName)
-	if err != nil {
-		helper.Logger.Println(5, "Error remove user", ProjectId, err.Error())
-	}
-	return err
-}
-
-func ListUserProjectRecordByUser(UserName string) ([]UserProjectRecord, error) {
-	var records []UserProjectRecord
-	rows, err := Db.Query("select * from UserProject where userName=(?)", UserName)
-	if err != nil {
-		helper.Logger.Println(5, "Error ListUserProjectRecordByUser: ", err)
-		return records, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var record UserProjectRecord
-		var index int
-		if err := rows.Scan(&index, &record.ProjectId, &record.UserName, &record.Created); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
-}
-
-func ListUserProjectRecordByProject(ProjectId string) ([]UserProjectRecord, error) {
-	var records []UserProjectRecord
-	rows, err := Db.Query("select * from UserProject where projectId=(?)", ProjectId)
-	if err != nil {
-		helper.Logger.Println(5, "Error ListUserProjectRecordByUser: ", err)
-		return records, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var record UserProjectRecord
-		var index int
-		if err := rows.Scan(&index, &record.ProjectId, &record.UserName, &record.Created); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
-}
-
-func InsertProjectServiceRecord(ProjectId string, Service string, AccountId string) error {
-	created := time.Now().Format(TimeFormat)
-	_, err := Db.Exec("insert into ProjectService values( null, ?, ?, ?, ? )", ProjectId, Service, AccountId, created)
-	if err != nil {
-		helper.Logger.Println(5, "Error InsertProjectServiceRecord", ProjectId, Service, AccountId, created, err.Error())
-	}
-	return err
-}
-
-func RemoveProjectServiceRecord(ProjectId string, Service string, AccountId string) error {
-	_, err := Db.Exec("delete from ProjectService where projectId=(?) and service=(?) and accountId=(?)", ProjectId, Service, AccountId)
-	if err != nil {
-		helper.Logger.Println(5, "Error RemoveProjectServiceRecord", ProjectId, Service, AccountId, err.Error())
-	}
-	return err
-}
-
-func ListProjectServiceRecordByProject(ProjectId string, AccountId string) ([]ProjectServiceRecord, error) {
-	var records []ProjectServiceRecord
-	rows, err := Db.Query("select * from ProjectService where projectId=(?) and accountId=(?)", ProjectId, AccountId)
-	if err != nil {
-		helper.Logger.Println(5, "Error ListProjectServiceRecordByProject: ", err)
-		return records, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var record ProjectServiceRecord
-		var index int
-		if err := rows.Scan(&index, &record.ProjectId, &record.Service, &record.AccountId, &record.Created); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
-}
-
-func CheckAccountIdExist(AccountId string) (bool, error) {
-	var count int
-	err := Db.QueryRow("select count(*) from User where AccountId=(?)", AccountId).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	if count > 0 {
-		return true, nil
+	if has {
+		return p, nil
 	} else {
-		return false, nil
+		return p, ErrDbRecordNotFound
 	}
 }
 
-func CheckUserExist(UserName string) (bool, error) {
-	var count int
-	err := Db.QueryRow("select count(*) from User where userName=(?)", UserName).Scan(&count)
+func ListProjects(userId string) ([]ListProjectResp, error) {
+	resp := make([]ListProjectResp, 0)
+	Engine().Join("INNER", "project", "project.projectId = userproject.projectId").Find(&resp,&UserProject{UserId:userId})
+	return resp, nil
+}
+
+func ListProjectsByAccount(accountId string) (projects []Project, err error) {
+	err = Engine().Where("accountId = ?", accountId).Find(&projects)
 	if err != nil {
-		return false, err
+		helper.Logger.Errorln("Error list projects", accountId, err.Error())
+		return projects, err
 	}
-	if count > 0 {
-		return true, nil
+	return
+}
+
+func ListProjectsByOwner(ownerId string) (projects []Project, err error) {
+	err = Engine().Where("ownerId = ?", ownerId).Find(&projects)
+	if err != nil {
+		helper.Logger.Errorln("Error list projects", ownerId, err.Error())
+		return projects, err
+	}
+	return
+}
+
+func LinkUserWithProject(projectId string, userId string, acl string) error {
+	var up UserProject
+	up.ProjectId = projectId
+	up.UserId = userId
+	up.AccessKey = string(helper.GenerateRandomIdByLength(20))
+	up.AccessSecret = string(helper.GenerateRandomIdByLength(40))
+	up.Acl = acl
+	_, err := Engine().Insert(&up)
+	if err != nil{
+		helper.Logger.Errorln("Error link user with project", projectId, userId, acl, err.Error())
+	}
+	return err
+}
+
+func UnlinkUserWithProject(projectId string, userId string) error {
+	var up UserProject
+	up.ProjectId = projectId
+	up.UserId = userId
+	affected, err := Engine().Delete(&up)
+	if err != nil{
+		helper.Logger.Errorln("Error unlink project user:", projectId, userId, err.Error())
+		return err
+	}
+	if affected > 0 {
+		return nil
 	} else {
-		return false, nil
-	}
-
-}
-
-func InsertTokenRecord(Token string, UserName string, AccountId string, Type string) error {
-	created := time.Now().Format(TimeFormat)
-	expired := time.Now().Add(time.Duration(helper.CONFIG.TokenExpire*1000000000)).Format(TimeFormat)
-	_, err := Db.Exec("insert into Token values( ?, ?, ?, ?, ?, ? )", Token, UserName, AccountId, Type, created, expired)
-	if err != nil {
-		helper.Logger.Println(5, "Error InsertTokenRecord", Token, UserName, AccountId, Type, created, expired, err.Error())
+		helper.Logger.Println("Project User record not existed:", projectId, userId)
+		return ErrDbRecordNotFound
 	}
 	return err
 }
 
-func GetTokenRecord(Token string) (TokenRecord, error) {
-	var record TokenRecord
-	err := Db.QueryRow("select * from Token where token=(?)", Token).Scan(&record.Token,
-		&record.UserName,
-		&record.AccountId,
-		&record.Type,
-		&record.Created,
-		&record.Expired)
-	return record, err
+//func ListUserProjectLinksByUser(userId string) (ups []UserProject, err error) {
+//	err = Engine().Where("userId = ?", userId).Find(&ups)
+//	if err != nil {
+//		helper.Logger.Errorln("Error list projects", userId, err.Error())
+//	}
+//	return
+//}
+
+func ListUsersByProject(projectId string) (ups []ListUserResp, err error) {
+	resp := make([]ListUserResp, 0)
+	Engine().Join("INNER", "user", "user.userId = userproject.userId").Find(&resp,&UserProject{ProjectId:projectId})
+	return resp, nil
 }
 
-func InsertAkSkRecord(AccessKey string, SecretKey string, ProjectId string, AccountId string, KeyName string, Description string) error {
-	created := time.Now().Format(TimeFormat)
-	_, err := Db.Exec("insert into AkSk values( ?, ?, ?, ?, ?, ?, ?)", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description)
-	if err != nil {
-		helper.Logger.Println(5, "Error InsertAkSkRecord ", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description,err.Error())
+func CheckAccountIdExist(accountId string) (exist bool, err error) {
+	var user User
+	user.AccountId = accountId
+	user.Type = ROLE_ACCOUNT
+	exist, err = Engine().Exist(&user)
+	return
+}
+
+func CheckUserExist(userId string) (exist bool, err error) {
+	var user User
+	user.UserId = userId
+	exist, err = Engine().Exist(&user)
+	return
+
+}
+
+func CreateToken(token string, userId string, userName string, accountId string, userType string) error {
+	var t Token
+	t.Token = token
+	t.UserName = userName
+	t.UserId = userId
+	t.Type = userType
+	t.AccountId = accountId
+	_, err := Engine().Insert(&t)
+	if err != nil{
+		helper.Logger.Errorln("Error create token", token, userId, userName, err.Error())
 	}
 	return err
 }
 
-func IfAKExisted(AccessKey string) bool {
-	var record AkSkRecord
-	err := Db.QueryRow("select * from User where accessKey=(?)", AccessKey).Scan(
-		&record.AccessKey,
-		&record.AccessSecret,
-		&record.ProjectId,
-		&record.AccountId,
-		&record.KeyName,
-		&record.Created,
-		&record.Description)
+func GetToken(token string) (t Token, err error) {
+	t.Token = token
+	has, err := Engine().Get(&t)
 	if err != nil {
-		return false
+		helper.Logger.Errorln("Error describe token:", token, err.Error())
+		return t, err
+	}
+	if has {
+		return t, nil
 	} else {
-		return true
+		return t, ErrDbRecordNotFound
 	}
 }
 
-func RemoveAkSkRecord(AccessKey string, AccountId string) error {
-	_, err := Db.Exec("delete from AkSk where accessKey=(?) and accountId=(?)", AccessKey, AccountId)
+func RemoveToken(token string) error {
+	var t Token
+	t.Token = token
+	affected, err := Engine().Delete(&t)
+	if err != nil{
+		helper.Logger.Errorln("Error remove token:", token, err.Error())
+		return err
+	}
+	if affected > 0 {
+		return nil
+	} else {
+		helper.Logger.Println("token not existed:", token)
+		return ErrDbRecordNotFound
+	}
+}
+
+func ListExpiredTokens() (tokens []Token, err error) {
+	now := time.Now()
+	expired := now.Add(-time.Duration(helper.Config.TokenExpire * 1000000000))
+	err = Engine().Where("createdAt < ?", expired).Find(&tokens)
 	if err != nil {
-		helper.Logger.Println(5, "Error RemoveAkSkRecord", AccessKey, err.Error())
+		helper.Logger.Errorln("Error list expired tokens", err.Error())
 	}
-	return err
+	return
 }
 
-func ListAkSkRecordByProject(ProjectId string, AccountId string) ([]AkSkRecord, error) {
-	var records []AkSkRecord
-	rows, err := Db.Query("select * from AkSk where projectId=(?) and accountId=(?)", ProjectId, AccountId)
+//func InsertAkSkRecord(AccessKey string, SecretKey string, ProjectId string, AccountId string, KeyName string, Description string) error {
+//	created := time.Now().Format(TimeFormat)
+//	_, err := Db.Exec("insert into AkSk values( ?, ?, ?, ?, ?, ?, ?)", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description)
+//	if err != nil {
+//		helper.Logger.Println(5, "Error InsertAkSkRecord ", AccessKey, SecretKey, ProjectId, AccountId, KeyName, created, Description,err.Error())
+//	}
+//	return err
+//}
+//
+//func IfAKExisted(AccessKey string) bool {
+//	var record AkSkRecord
+//	err := Db.QueryRow("select * from User where accessKey=(?)", AccessKey).Scan(
+//		&record.AccessKey,
+//		&record.AccessSecret,
+//		&record.ProjectId,
+//		&record.AccountId,
+//		&record.KeyName,
+//		&record.Created,
+//		&record.Description)
+//	if err != nil {
+//		return false
+//	} else {
+//		return true
+//	}
+//}
+
+//func RemoveAkSkRecord(AccessKey string, AccountId string) error {
+//	_, err := Db.Exec("delete from AkSk where accessKey=(?) and accountId=(?)", AccessKey, AccountId)
+//	if err != nil {
+//		helper.Logger.Println(5, "Error RemoveAkSkRecord", AccessKey, err.Error())
+//	}
+//	return err
+//}
+
+//func ListAkSkRecordByProject(ProjectId string, AccountId string) ([]AkSkRecord, error) {
+//	var records []AkSkRecord
+//	rows, err := Db.Query("select * from AkSk where projectId=(?) and accountId=(?)", ProjectId, AccountId)
+//	if err != nil {
+//		helper.Logger.Println(5, "Error ListAkSkRecordByProject: ", err)
+//		return records, err
+//	}
+//	defer rows.Close()
+//	for rows.Next() {
+//		var record AkSkRecord
+//		if err := rows.Scan(&record.AccessKey, &record.AccessSecret, &record.ProjectId, &record.AccountId, &record.KeyName, &record.Created, &record.Description); err != nil {
+//			helper.Logger.Println(5, "Row scan error: ", err)
+//			continue
+//		}
+//		records = append(records, record)
+//	}
+//	if err := rows.Err(); err != nil {
+//		helper.Logger.Println(5, "Row error: ", err)
+//	}
+//	return records, err
+//}
+//
+//func ListKeyRecordsByProjects(ProjectIds []string, AccountId string) ([]AkSkRecord, error) {
+//	var records []AkSkRecord
+//	rows, err := Db.Query("select * from AkSk where projectId=(?) and accountId=(?)", ProjectId, AccountId)
+//	if err != nil {
+//		helper.Logger.Println(5, "Error ListAkSkRecordByProject: ", err)
+//		return records, err
+//	}
+//	defer rows.Close()
+//	for rows.Next() {
+//		var record AkSkRecord
+//		if err := rows.Scan(&record.AccessKey, &record.AccessSecret, &record.ProjectId, &record.AccountId, &record.KeyName, &record.Created, &record.Description); err != nil {
+//			helper.Logger.Println(5, "Row scan error: ", err)
+//			continue
+//		}
+//		records = append(records, record)
+//	}
+//	if err := rows.Err(); err != nil {
+//		helper.Logger.Println(5, "Row error: ", err)
+//	}
+//	return records, err
+//}
+
+//func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
+//	var items []AccessKeyItem
+//	var err error
+//	for _, key := range AccessKeys {
+//		var record AkSkRecord
+//		var item AccessKeyItem
+//		err = Db.QueryRow("select * from AkSk where accessKey=(?)", key).Scan(
+//			&record.AccessKey,
+//			&record.AccessSecret,
+//			&record.ProjectId,
+//			&record.AccountId,
+//			&record.KeyName,
+//			&record.Created,
+//			&record.Description)
+//		if err != nil {
+//			helper.Logger.Println(5, "GetKeysByAccessKeys err: ", err)
+//			continue
+//		}
+//		item.ProjectId = record.ProjectId
+//		item.AccessKey = record.AccessKey
+//		item.AccessSecret =  record.AccessSecret
+//		item.Name = record.KeyName
+//		item.Status = "active"
+//		item.Updated = record.Created
+//		item.Description = record.Description
+//		items = append(items, item)
+//	}
+//	return items, err
+//}
+
+func GetUserProjectByAccessKey(AccessKey string) (up UserProject, err error) {
+	up.AccessKey = AccessKey
+	has, err := Engine().Get(&up)
 	if err != nil {
-		helper.Logger.Println(5, "Error ListAkSkRecordByProject: ", err)
-		return records, err
+		helper.Logger.Errorln("Error get user-project by accessKey", AccessKey, err.Error())
+		return up, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var record AkSkRecord
-		if err := rows.Scan(&record.AccessKey, &record.AccessSecret, &record.ProjectId, &record.AccountId, &record.KeyName, &record.Created, &record.Description); err != nil {
-			helper.Logger.Println(5, "Row scan error: ", err)
-			continue
-		}
-		records = append(records, record)
+	if has {
+		return up, nil
+	} else {
+		return up, ErrDbRecordNotFound
 	}
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return records, err
 }
 
-func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
-	var items []AccessKeyItem
-	var err error
-	for _, key := range AccessKeys {
-		var record AkSkRecord
-		var item AccessKeyItem
-		err = Db.QueryRow("select * from AkSk where accessKey=(?)", key).Scan(
-			&record.AccessKey,
-			&record.AccessSecret,
-			&record.ProjectId,
-			&record.AccountId,
-			&record.KeyName,
-			&record.Created,
-			&record.Description)
-		if err != nil {
-			helper.Logger.Println(5, "GetKeysByAccessKeys err: ", err)
-			continue
-		}
-		item.ProjectId = record.ProjectId
-		item.AccessKey = record.AccessKey
-		item.AccessSecret =  record.AccessSecret
-		item.Name = record.KeyName
-		item.Status = "active"
-		item.Updated = record.Created
-		item.Description = record.Description
-		items = append(items, item)
-	}
-	return items, err
-}
-
-func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
-	var items []AccessKeyItem
-	var err error
-	var record AkSkRecord
-	var item AccessKeyItem
-	rows, err := Db.Query("select * from AkSk where accountid=(?)", accountid)
-	if err != nil {
-		helper.Logger.Println(5, "Error GetKeysByAccount: ", err)
-		return items, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := rows.Scan(
-			&record.AccessKey,
-			&record.AccessSecret,
-			&record.ProjectId,
-			&record.AccountId,
-			&record.KeyName,
-			&record.Created,
-			&record.Description); err != nil {
-				helper.Logger.Println(5, "Row scan error: ", err)
-				continue
-			}
-
-			item.ProjectId = record.ProjectId
-			item.AccessKey = record.AccessKey
-			item.AccessSecret =  record.AccessSecret
-			item.Name = record.KeyName
-			item.Status = "active" //fixme
-			item.Updated = record.Created
-			item.Created = record.Created //fixme
-			item.Description = record.Description
-			items = append(items, item)
-	}	
-	if err := rows.Err(); err != nil {
-		helper.Logger.Println(5, "Row error: ", err)
-	}
-	return items, err
-}
+//func GetKeysByAccount(accountid string) ([]AccessKeyItem, error) {
+//	var items []AccessKeyItem
+//	var err error
+//	var record AkSkRecord
+//	var item AccessKeyItem
+//	rows, err := Db.Query("select * from AkSk where accountid=(?)", accountid)
+//	if err != nil {
+//		helper.Logger.Println(5, "Error GetKeysByAccount: ", err)
+//		return items, err
+//	}
+//
+//	defer rows.Close()
+//
+//	for rows.Next() {
+//		if err := rows.Scan(
+//			&record.AccessKey,
+//			&record.AccessSecret,
+//			&record.ProjectId,
+//			&record.AccountId,
+//			&record.KeyName,
+//			&record.Created,
+//			&record.Description); err != nil {
+//				helper.Logger.Println(5, "Row scan error: ", err)
+//				continue
+//			}
+//
+//			item.ProjectId = record.ProjectId
+//			item.AccessKey = record.AccessKey
+//			item.AccessSecret =  record.AccessSecret
+//			item.Name = record.KeyName
+//			item.Status = "active" //fixme
+//			item.Updated = record.Created
+//			item.Created = record.Created //fixme
+//			item.Description = record.Description
+//			items = append(items, item)
+//	}
+//	if err := rows.Err(); err != nil {
+//		helper.Logger.Println(5, "Row error: ", err)
+//	}
+//	return items, err
+//}

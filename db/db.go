@@ -32,6 +32,46 @@ func Db_Init() {
 		helper.Logger.Errorln(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
 		panic(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
 	}
+	exist, err := engine.IsTableExist(&User{})
+	if err != nil {
+		panic("check table failed")
+	} else {
+		if exist == false {
+			if engine.CreateTables(&User{}) != nil {
+				panic("create table failed")
+			}
+		}
+	}
+	exist, err = engine.IsTableExist(&Token{})
+	if err != nil {
+		panic("check table failed")
+	} else {
+		if exist == false {
+			if engine.CreateTables(&Token{}) != nil {
+				panic("create table failed")
+			}
+		}
+	}
+	exist, err = engine.IsTableExist(&Project{})
+	if err != nil {
+		panic("check table failed")
+	} else {
+		if exist == false {
+			if engine.CreateTables(&Project{}) != nil {
+				panic("create table failed")
+			}
+		}
+	}
+	exist, err = engine.IsTableExist(&UserProject{})
+	if err != nil {
+		panic("check table failed")
+	} else {
+		if exist == false {
+			if engine.CreateTables(&UserProject{}) != nil {
+				panic("create table failed")
+			}
+		}
+	}
 	var root User
 	root.UserName = "root"
 	root.Password = "root"
@@ -43,13 +83,13 @@ func Db_Init() {
 	engine.Insert(&root)
 
 	var admin User
-	root.UserName = "admin"
-	root.Password = "admin"
-	root.UserId = helper.GenerateUserId()
-	root.Type = ROLE_ACCOUNT
-	root.DisplayName = "default_account"
-	root.AccountId = admin.UserId
-	root.Status = USER_STATUS_ACTIVE
+	admin.UserName = "admin"
+	admin.Password = "admin"
+	admin.UserId = helper.GenerateUserId()
+	admin.Type = ROLE_ACCOUNT
+	admin.DisplayName = "default_account"
+	admin.AccountId = admin.UserId
+	admin.Status = USER_STATUS_ACTIVE
 	engine.Insert(&admin)
 
 	engine.ShowSQL(true)

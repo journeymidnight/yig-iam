@@ -108,7 +108,7 @@ type UserProject struct {
 
 type QueryRequest struct{
 	Acl string `json:"acl,omitempty"`
-	UserName string `json:"user,omitempty"`
+	UserName string `json:"userName,omitempty"`
 	UserId string `json:"userId,omitempty"`
 	KeyName string `json:"keyName,omitempty"`
 	ProjectId string `json:"projectId,omitempty"`

@@ -614,7 +614,7 @@ func RemoveToken(token string) error {
 func ListExpiredTokens() (tokens []Token, err error) {
 	now := time.Now()
 	expired := now.Add(-time.Duration(helper.Config.TokenExpire * 1000000000))
-	err = Engine().Where("createdAt < ?", expired).Find(&tokens)
+	err = Engine().Where("created < ?", expired).Find(&tokens)
 	if err != nil {
 		helper.Logger.Errorln("Error list expired tokens", err.Error())
 	}

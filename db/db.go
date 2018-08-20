@@ -252,6 +252,8 @@ func CreateUser(userName string, password string, accountType string,
 	p.ProjectName = "Private"
 	p.ProjectType = PRIVATE_PROJECT
 	p.AccountId = accountId
+	p.OwnerId = user.UserId
+	p.Status = PROJECT_STATUS_ACTIVE
 	p.Description = fmt.Sprintf("own by %s", userName)
 	_, err = session.Insert(&p)
 	if err != nil {
@@ -267,6 +269,7 @@ func CreateUser(userName string, password string, accountType string,
 	up.UserId = user.UserId
 	up.ProjectId = p.ProjectId
 	up.AccountId = accountId
+	up.Status = KEY_STATUS_ENABLE
 	up.Acl = ACL_RW
 	_, err = session.Insert(&up)
 	if err != nil {

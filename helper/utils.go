@@ -11,7 +11,6 @@ import (
 
 func CreatePidfile(pidFile string) error {
 	if pidFile != "" {
-		fmt.Println(6, "enter 11:")
 		if err := WritePid(pidFile); err != nil {
 			return err
 		}
@@ -22,21 +21,18 @@ func CreatePidfile(pidFile string) error {
 func RemovePidfile(pidFile string) {
 	if pidFile != "" {
 		if err := os.Remove(pidFile); err != nil {
-			Logger.Printf(5, "error to remove pidfile %s:", err)
+			Logger.Printf("error to remove pidfile %s:", err)
 		}
 	}
 }
 
 func WritePid(pidfile string) error {
 	var file *os.File
-	fmt.Println(6, "enter 12:")
 	if _, err := os.Stat(pidfile); os.IsNotExist(err) {
-		fmt.Println(6, "enter 14:")
 		if file, err = os.Create(pidfile); err != nil {
 			return err
 		}
 	} else {
-		fmt.Println(6, "enter 15:")
 		if file, err = os.OpenFile(pidfile, os.O_RDWR, 0); err != nil {
 			return err
 		}
@@ -46,23 +42,17 @@ func WritePid(pidfile string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(6, "enter 16:")
 		if n > 0 {
 			pid, err := strconv.Atoi(string(pidstr[:n]))
 			if err != nil {
 				fmt.Printf("err: %s, overwriting pidfile", err)
 			}
-			fmt.Println(6, "enter 17:")
 			process, _ := os.FindProcess(pid)
-			fmt.Println(6, "enter 19:")
 			if err = process.Signal(syscall.Signal(0)); err == nil {
-				fmt.Println(6, "enter 20:")
 				return fmt.Errorf("pid: %d is running", pid)
 			} else {
-				fmt.Println(6, "enter 21:")
 				fmt.Printf("err: %s, cleanup pidfile", err)
 			}
-			fmt.Println(6, "enter 18:")
 			if file, err = os.Create(pidfile); err != nil {
 				return err
 			}
@@ -71,7 +61,6 @@ func WritePid(pidfile string) error {
 
 	}
 	defer file.Close()
-	fmt.Println(6, "enter 13:")
 	pid := strconv.Itoa(os.Getpid())
 	fmt.Fprintf(file, "%s", pid)
 	return nil

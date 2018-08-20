@@ -2,7 +2,6 @@ package helper
 
 import (
 	. "github.com/journeymidnight/yig-iam/api/datatype"
-	"github.com/gorilla/mux"
 )
 
 func Casbin_init () {

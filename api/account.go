@@ -18,6 +18,12 @@ func CreateAccount(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+
+	if query.UserName == "" || query.Password == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
+
 	var accountId []byte
 	loop := 0
 	for loop < 3 {
@@ -56,6 +62,11 @@ func DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if query.UserName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
+
 	err = db.DeleteAccount(query.UserName)
 	if err != nil {
 		helper.Logger.Errorln("failed delete account for query:", query)
@@ -77,6 +88,10 @@ func DeactivateAccount(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.UserName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	err = db.DeactivateAccount(query.UserName)
 	if err != nil {
 		helper.Logger.Errorln("failed deactivate account: ", query)
@@ -95,6 +110,10 @@ func ActivateAccount(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.UserName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	err = db.ActivateAccount(query.UserName)
 	if err != nil {
 		helper.Logger.Errorln("failed deactivate account: ", query)
@@ -111,6 +130,10 @@ func DescribeAccount(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.UserName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	account, err := db.DescribeAccount(query.UserName)

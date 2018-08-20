@@ -23,6 +23,10 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.ProjectName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	//ak, sk := helper.GenerateKey()
 	err = db.CreateProject(query.ProjectName, PUBLIC_PROJECT, token.AccountId, query.Description)
 	if err != nil {
@@ -43,6 +47,10 @@ func DeleteProject(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.ProjectName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	err = db.RemoveProject(query.ProjectId, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DeleteProject for query:", query)
@@ -60,6 +68,10 @@ func DescribeProject(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.ProjectName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	record, err := db.DescribeProject(query.ProjectId, token.AccountId)
@@ -94,6 +106,10 @@ func ListProjectByUser(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.UserId == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	record, err := db.ListProjects(query.UserId)

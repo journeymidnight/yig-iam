@@ -399,6 +399,8 @@ func CreateProject(projectName, projectType, accountId, description string) erro
 	p.ProjectType = projectType
 	p.AccountId = accountId
 	p.Description = description
+	p.OwnerId = accountId
+	p.Status = PROJECT_STATUS_ACTIVE
 	_, err = session.Insert(&p)
 	if err != nil {
 		helper.Logger.Errorln("Error create project", projectId, projectName, accountId, projectType, err.Error())
@@ -412,6 +414,8 @@ func CreateProject(projectName, projectType, accountId, description string) erro
 	up.UserId = accountId
 	up.ProjectId = projectId
 	up.Acl = ACL_RW
+	up.Status = KEY_STATUS_ENABLE
+	up.AccountId = accountId
 	_, err = session.Insert(&up)
 	if err != nil {
 		helper.Logger.Errorln("Error create user-project", projectId, projectName, accountId, projectType, err.Error())

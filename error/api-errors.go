@@ -38,6 +38,7 @@ const (
 	ErrInternalError
 	ErrDbOperateFailed
 	ErrDbRecordNotFound
+	ErrInvalidParameters
 )
 
 // error code to APIError structure, these fields carry respective
@@ -133,6 +134,11 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 		ErrorCode:      "database record not existed",
 		Description:    "database record not existed",
 		HttpStatusCode: http.StatusNotFound,
+	},
+	ErrInvalidParameters: {
+		ErrorCode:      "parameters in body not complete",
+		Description:    "parameters in body not complete",
+		HttpStatusCode: http.StatusBadRequest,
 	},
 
 

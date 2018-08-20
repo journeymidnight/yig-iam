@@ -17,6 +17,10 @@ func LinkUserWithProject(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.ProjectId == "" || query.UserId == "" || query.Acl == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	err = db.LinkUserWithProject(query.ProjectId, query.UserId, query.Acl)
 	if err != nil {
 		WriteErrorResponse(w, r, err)
@@ -32,6 +36,10 @@ func UnLinkUserWithProject(w http.ResponseWriter, r *http.Request)  {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.ProjectId == "" || query.UserId == "" {
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	err = db.UnlinkUserWithProject(query.ProjectId, query.UserId)
@@ -71,6 +79,10 @@ func ListUserByProject(w http.ResponseWriter, r *http.Request)  {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.ProjectId == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	record, err := db.ListUsersByProject(query.ProjectId)

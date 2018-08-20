@@ -19,6 +19,10 @@ func CreateUser(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+	if query.UserName == "" || query.Password == "" {
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	err = db.CreateUser(query.UserName, query.Password, ROLE_USER, query.Email, query.DisplayName, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateUser for query:", query)
@@ -40,6 +44,17 @@ func DeleteUser(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
+
+	if query.UserName == "" {
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
+
+	if query.UserName == "root"{
+		WriteErrorResponse(w, r, ErrNotAuthorised)
+		return
+	}
+
 	err = db.RemoveUser(query.UserName, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DeleteUser for query:", query)
@@ -59,6 +74,10 @@ func DescribeUser(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, query)
 	if err != nil {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if query.UserName == "" {
+		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
 	user, err := db.DescribeUser(query.UserName, token.AccountId)

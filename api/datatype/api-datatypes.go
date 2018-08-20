@@ -192,8 +192,8 @@ type LoginResponse struct {
 
 type ListProjectResp struct {
 	UserProject `xorm:"extends"`
-	ProjectName    string
-	ProjectType    string
+	ProjectName    string `json:"projectName" xorm:" 'projectName' varchar(50) notnull"`
+	ProjectType    string `json:"projectType" xorm:" 'projectType' varchar(20) notnull"`
 }
 
 func (ListProjectResp) TableName() string {
@@ -202,8 +202,8 @@ func (ListProjectResp) TableName() string {
 
 type ListUserResp struct {
 	UserProject `xorm:"extends"`
-	UserName    string
-	DisplayName    string
+	UserName    string `json:"userName" xorm:" 'userName' varchar(50) pk notnull"`
+	DisplayName    string `json:"displayName"  xorm:" 'displayName' varchar(50) DEFAULT NULL"`
 }
 
 func (ListUserResp) TableName() string {

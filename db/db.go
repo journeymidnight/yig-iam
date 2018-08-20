@@ -483,7 +483,7 @@ func DescribeProject(projectId string, accountId string) (p Project, err error) 
 
 func ListProjects(userId string) ([]ListProjectResp, error) {
 	resp := make([]ListProjectResp, 0)
-	Engine().Join("INNER", "project", "project.projectId = userproject.projectId").Find(&resp,&UserProject{UserId:userId})
+	Engine().Join("INNER", "project", "project.projectId = user_project.projectId").Where("user_project.userId=?",userId).Find(&resp)
 	return resp, nil
 }
 
@@ -547,7 +547,7 @@ func UnlinkUserWithProject(projectId string, userId string) error {
 
 func ListUsersByProject(projectId string) (ups []ListUserResp, err error) {
 	resp := make([]ListUserResp, 0)
-	Engine().Join("INNER", "user", "user.userId = user_project.userId").Find(&resp,&UserProject{ProjectId:projectId})
+	Engine().Join("INNER", "user", "user.userId = user_project.userId").Where("user_project.projectId=?",projectId).Find(&resp)
 	return resp, nil
 }
 

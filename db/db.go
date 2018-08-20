@@ -32,6 +32,26 @@ func Db_Init() {
 		helper.Logger.Errorln(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
 		panic(fmt.Sprintf("Connected to database %s failed", helper.Config.UserDataSource+"yig_iam"))
 	}
+	var root User
+	root.UserName = "root"
+	root.Password = "root"
+	root.UserId = helper.GenerateUserId()
+	root.Type = ROLE_ROOT
+	root.DisplayName = "default_root"
+	root.AccountId = root.UserId
+	root.Status = USER_STATUS_ACTIVE
+	engine.Insert(&root)
+
+	var admin User
+	root.UserName = "admin"
+	root.Password = "admin"
+	root.UserId = helper.GenerateUserId()
+	root.Type = ROLE_ACCOUNT
+	root.DisplayName = "default_account"
+	root.AccountId = admin.UserId
+	root.Status = USER_STATUS_ACTIVE
+	engine.Insert(&admin)
+
 	engine.ShowSQL(true)
 }
 

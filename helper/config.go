@@ -55,6 +55,14 @@ func GenerateKey() ([]byte, []byte){
 	return accessKey, accessSecret
 }
 
+func GenerateUserId() string {
+	return "u-" + string(GenerateRandomId())
+}
+
+func GenerateProjectId() string {
+	return "p-" + string(GenerateRandomId())
+}
+
 var Config *Configuration
 
 const CONFIGPATH = "/etc/yig-iam/conf.toml"

@@ -4,9 +4,7 @@ import (
 	"fmt"
 	//	"time"
 	//	"syscall"
-	"encoding/json"
 	"github.com/journeymidnight/yig-iam/helper"
-	"github.com/journeymidnight/yig-iam/log"
 	. "github.com/journeymidnight/yig-iam/api"
 	"github.com/journeymidnight/yig-iam/db"
 	"github.com/casbin/casbin"
@@ -21,8 +19,6 @@ import (
 	"time"
 	"net/http"
 )
-
-var logger *log.Logger
 
 var AllRoutes []map[string]string
 
@@ -185,7 +181,7 @@ func main() {
 	helper.Enforcer.LoadPolicy()
 	roles := helper.Enforcer.GetAllRoles()
 	if len(roles) == 0 {
-	    logger.Println(5, "roles number:", len(roles))
+	    helper.Logger.Println("roles number:", len(roles))
 		helper.Casbin_init()
 	}
 	n.Use(c)

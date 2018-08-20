@@ -197,7 +197,7 @@ type ListProjectResp struct {
 }
 
 func (ListProjectResp) TableName() string {
-	return "userproject"
+	return "user_project"
 }
 
 type ListUserResp struct {
@@ -207,7 +207,7 @@ type ListUserResp struct {
 }
 
 func (ListUserResp) TableName() string {
-	return "userproject"
+	return "user_project"
 }
 
 //type UserProjectRecord struct {

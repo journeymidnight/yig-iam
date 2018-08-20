@@ -547,7 +547,7 @@ func UnlinkUserWithProject(projectId string, userId string) error {
 
 func ListUsersByProject(projectId string) (ups []ListUserResp, err error) {
 	resp := make([]ListUserResp, 0)
-	Engine().Join("INNER", "user", "user.userId = userproject.userId").Find(&resp,&UserProject{ProjectId:projectId})
+	Engine().Join("INNER", "user", "user.userId = user_project.userId").Find(&resp,&UserProject{ProjectId:projectId})
 	return resp, nil
 }
 

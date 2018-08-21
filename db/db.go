@@ -487,7 +487,7 @@ func DescribeProject(projectId string, accountId string) (p Project, err error) 
 
 func ListProjects(userId string) ([]ListProjectResp, error) {
 	resp := make([]ListProjectResp, 0)
-	Engine().Join("INNER", "project", "project.projectId = user_project.projectId").Where("user_project.userId=?",userId).Find(&resp)
+	Engine().Join("INNER", "project", "project.projectId = user_project.projectId").Where("user_project.userId=? and project.status <>?",userId,PROJECT_STATUS_DELETED).Find(&resp)
 	return resp, nil
 }
 
@@ -509,13 +509,15 @@ func ListProjectsByOwner(ownerId string) (projects []Project, err error) {
 	return
 }
 
-func LinkUserWithProject(projectId string, userId string, acl string) error {
+func LinkUserWithProject(projectId string, userId string, acl string, accountId string) error {
 	var up UserProject
 	up.ProjectId = projectId
 	up.UserId = userId
 	up.AccessKey = string(helper.GenerateRandomIdByLength(20))
 	up.AccessSecret = string(helper.GenerateRandomIdByLength(40))
 	up.Acl = acl
+	up.Status = KEY_STATUS_ENABLE
+	up.AccountId = accountId
 	_, err := Engine().Insert(&up)
 	if err != nil{
 		helper.Logger.Errorln("Error link user with project", projectId, userId, acl, err.Error())

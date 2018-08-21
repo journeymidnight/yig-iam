@@ -10,6 +10,7 @@ import (
 )
 
 func LinkUserWithProject(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
 	body, _ := ioutil.ReadAll(r.Body)
 	query := &QueryRequest{}
 	err := json.Unmarshal(body, query)
@@ -21,7 +22,7 @@ func LinkUserWithProject(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
-	err = db.LinkUserWithProject(query.ProjectId, query.UserId, query.Acl)
+	err = db.LinkUserWithProject(query.ProjectId, query.UserId, query.Acl, token.AccountId)
 	if err != nil {
 		WriteErrorResponse(w, r, err)
 		return

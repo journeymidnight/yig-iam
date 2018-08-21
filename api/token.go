@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/journeymidnight/yig-iam/helper"
 	. "github.com/journeymidnight/yig-iam/api/datatype"
 	. "github.com/journeymidnight/yig-iam/error"
 	"github.com/journeymidnight/yig-iam/db"
@@ -38,7 +37,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uuid := uuid.New()
-	helper.Logger.Println(5, "ConnectService uuid length:", len(uuid.String()))
 	err = db.CreateToken(uuid.String(), user.UserId, user.UserName, user.AccountId, user.Type)
 	if err != nil {
 		WriteErrorResponse(w, r, err)

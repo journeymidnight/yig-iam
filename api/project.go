@@ -47,7 +47,7 @@ func DeleteProject(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	if query.ProjectName == ""{
+	if query.ProjectId == "" {
 		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
@@ -70,7 +70,7 @@ func DescribeProject(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-	if query.ProjectName == ""{
+	if query.ProjectId == ""{
 		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}

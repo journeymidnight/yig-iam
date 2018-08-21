@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"flag"
+	"time"
 )
 
 func Ternary(IF bool, THEN interface{}, ELSE interface{}) interface{} {
@@ -15,6 +16,10 @@ func Ternary(IF bool, THEN interface{}, ELSE interface{}) interface{} {
 	} else {
 		return ELSE
 	}
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano() / int64(time.Millisecond))
 }
 
 // Static alphaNumeric table used for generating unique request ids

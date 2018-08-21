@@ -220,7 +220,7 @@ func ListAccounts() ([]User, error) {
 }
 
 func CreateUser(userName string, password string, accountType string,
-			email string, displayName string, accountId string) error {
+			email string, displayName string, accountId string, createProject bool) error {
 	session := Engine().NewSession()
 	defer session.Close()
 	err := session.Begin()
@@ -246,36 +246,38 @@ func CreateUser(userName string, password string, accountType string,
 		return err
 	}
 
-	var p Project
-	projectId := "p-" + string(helper.GenerateRandomId())
-	p.ProjectId = projectId
-	p.ProjectName = "Private"
-	p.ProjectType = PRIVATE_PROJECT
-	p.AccountId = accountId
-	p.OwnerId = user.UserId
-	p.Status = PROJECT_STATUS_ACTIVE
-	p.Description = fmt.Sprintf("own by %s", userName)
-	_, err = session.Insert(&p)
-	if err != nil {
-		helper.Logger.Errorln("Error create private project", projectId, userName, err.Error())
-		session.Rollback()
-		return err
-	}
+	if createProject == true {
+		var p Project
+		projectId := "p-" + string(helper.GenerateRandomId())
+		p.ProjectId = projectId
+		p.ProjectName = "Private"
+		p.ProjectType = PRIVATE_PROJECT
+		p.AccountId = accountId
+		p.OwnerId = user.UserId
+		p.Status = PROJECT_STATUS_ACTIVE
+		p.Description = fmt.Sprintf("own by %s", userName)
+		_, err = session.Insert(&p)
+		if err != nil {
+			helper.Logger.Errorln("Error create private project", projectId, userName, err.Error())
+			session.Rollback()
+			return err
+		}
 
-	var up UserProject
-	ak, sk := helper.GenerateKey()
-	up.AccessKey = string(ak)
-	up.AccessSecret = string(sk)
-	up.UserId = user.UserId
-	up.ProjectId = p.ProjectId
-	up.AccountId = accountId
-	up.Status = KEY_STATUS_ENABLE
-	up.Acl = ACL_RW
-	_, err = session.Insert(&up)
-	if err != nil {
-		helper.Logger.Errorln("Error create user-project", projectId, up.UserId, accountId, up.Acl, err.Error())
-		session.Rollback()
-		return err
+		var up UserProject
+		ak, sk := helper.GenerateKey()
+		up.AccessKey = string(ak)
+		up.AccessSecret = string(sk)
+		up.UserId = user.UserId
+		up.ProjectId = p.ProjectId
+		up.AccountId = accountId
+		up.Status = KEY_STATUS_ENABLE
+		up.Acl = ACL_RW
+		_, err = session.Insert(&up)
+		if err != nil {
+			helper.Logger.Errorln("Error create user-project", projectId, up.UserId, accountId, up.Acl, err.Error())
+			session.Rollback()
+			return err
+		}
 	}
 
 	err = session.Commit()

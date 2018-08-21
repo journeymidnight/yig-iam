@@ -25,7 +25,7 @@ func CreateAccount(w http.ResponseWriter, r *http.Request)  {
 	}
 
 	accountId := "u-" + string(helper.GenerateRandomId())
-	err = db.CreateUser(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, accountId)
+	err = db.CreateUser(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, accountId, false)
 	if err != nil {
 		WriteErrorResponse(w, r, err)
 		return

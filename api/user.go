@@ -23,7 +23,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request)  {
 		WriteErrorResponse(w, r, ErrInvalidParameters)
 		return
 	}
-	err = db.CreateUser(query.UserName, query.Password, ROLE_USER, query.Email, query.DisplayName, token.AccountId)
+	err = db.CreateUser(query.UserName, query.Password, ROLE_USER, query.Email, query.DisplayName, token.AccountId, true)
 	if err != nil {
 		helper.Logger.Println(5, "failed CreateUser for query:", query)
 		WriteErrorResponse(w, r, err)

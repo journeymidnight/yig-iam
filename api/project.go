@@ -34,7 +34,7 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, err)
 		return
 	}
-	WriteErrorResponse(w, r, nil)
+	WriteSuccessResponse(w, nil)
 	return
 }
 
@@ -54,10 +54,10 @@ func DeleteProject(w http.ResponseWriter, r *http.Request)  {
 	err = db.RemoveProject(query.ProjectId, token.AccountId)
 	if err != nil {
 		helper.Logger.Println(5, "failed DeleteProject for query:", query)
-		WriteErrorResponse(w, r, ErrDbOperateFailed)
+		WriteErrorResponse(w, r, err)
 		return
 	}
-	WriteErrorResponse(w, r, nil)
+	WriteSuccessResponse(w, nil)
 	return
 }
 

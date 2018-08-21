@@ -618,7 +618,15 @@ func RemoveToken(token string) error {
 func ListExpiredTokens() (tokens []Token, err error) {
 	now := time.Now()
 	expired := now.Add(-time.Duration(helper.Config.TokenExpire * 1000000000))
-	err = Engine().Where("created < ?", expired).Find(&tokens)
+
+
+	err = Engine().Iterate(new(Token), func(i int, bean interface{})error {
+		token := bean.(*Token)
+		if expired.Sub(time.Time(token.CreatedAt)) >0 {
+			tokens = append(tokens, *token)
+		}
+		return nil
+	})
 	if err != nil {
 		helper.Logger.Errorln("Error list expired tokens", err.Error())
 	}

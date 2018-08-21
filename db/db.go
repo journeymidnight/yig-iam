@@ -228,7 +228,8 @@ func CreateUser(userName string, password string, accountType string,
 	var user User
 	user.UserName = userName
 	user.Password = password
-	user.AccountId = accountId
+
+
 	if displayName == "" {
 		user.DisplayName = userName
 	}else {
@@ -237,6 +238,11 @@ func CreateUser(userName string, password string, accountType string,
 	user.Type = accountType
 	user.Email = email
 	user.UserId = "u-" + string(helper.GenerateRandomId())
+	if accountType == ROLE_ACCOUNT {
+		user.AccountId = user.UserId
+	} else {
+		user.AccountId = accountId
+	}
 	user.Status = USER_STATUS_ACTIVE
 
 	_, err = session.Insert(&user)

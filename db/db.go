@@ -121,29 +121,26 @@ func DeleteAccount(userName string) error {
 	defer session.Close()
 	err = session.Begin()
 
-	affected, err := session.Delete(&User{AccountId:user.AccountId})
+	_, err = session.Delete(&User{AccountId:user.AccountId})
 	if err != nil {
 		helper.Logger.Errorln("Error delete all users for account:", userName, err.Error())
 		session.Rollback()
 		return err
 	}
-	helper.Logger.Debugln("delete all users for account:", userName, affected, err.Error())
 
-	affected, err = session.Delete(&UserProject{AccountId:user.AccountId})
+	_, err = session.Delete(&UserProject{AccountId:user.AccountId})
 	if err != nil {
 		helper.Logger.Errorln("Error delete all user-project for account:", userName, err.Error())
 		session.Rollback()
 		return err
 	}
-	helper.Logger.Debugln("delete all user-project for account:", userName, affected, err.Error())
 
-	affected, err = Engine().Update(&Project{Status:PROJECT_STATUS_DELETED}, &Project{AccountId:user.AccountId})
+	_, err = Engine().Update(&Project{Status:PROJECT_STATUS_DELETED}, &Project{AccountId:user.AccountId})
 	if err != nil {
 		helper.Logger.Errorln("Error mark all projects deleted for account:", userName, err.Error())
 		session.Rollback()
 		return err
 	}
-	helper.Logger.Debugln("mark all projects deleted for account:", userName, affected, err.Error())
 
 	err = session.Commit()
 	if err != nil {
@@ -180,13 +177,12 @@ func DeactivateAccount(userName string) (error) {
 		return ErrDbRecordNotFound
 	}
 
-	affected, err := Engine().Update(&UserProject{Status:KEY_STATUS_DISABLE}, &UserProject{AccountId:user.AccountId})
-	//_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
+	_, err = Engine().Update(&UserProject{Status:KEY_STATUS_DISABLE}, &UserProject{AccountId:user.AccountId})
 	if err != nil {
 		helper.Logger.Errorln("Error deactivate account", userName, err.Error())
 		return err
 	}
-	helper.Logger.Debugln("mark all key status disable for account:", userName, affected, err.Error())
+
 	return nil
 }
 
@@ -203,13 +199,13 @@ func ActivateAccount(userName string) (error) {
 		return ErrDbRecordNotFound
 	}
 
-	affected, err := Engine().Update(&UserProject{Status:KEY_STATUS_ENABLE}, &UserProject{AccountId:user.AccountId})
+	_, err = Engine().Update(&UserProject{Status:KEY_STATUS_ENABLE}, &UserProject{AccountId:user.AccountId})
 	//_, err := Db.Exec("update User set status='inactive' where accountId=(?) and type='ACCOUNT'", AccountId)
 	if err != nil {
 		helper.Logger.Errorln("Error activate account", userName, err.Error())
 		return err
 	}
-	helper.Logger.Debugln("mark all key status enable for account:", userName, affected, err.Error())
+
 	return nil
 }
 
@@ -233,7 +229,11 @@ func CreateUser(userName string, password string, accountType string,
 	user.UserName = userName
 	user.Password = password
 	user.AccountId = accountId
-	user.DisplayName = displayName
+	if displayName == "" {
+		user.DisplayName = userName
+	}else {
+		user.DisplayName = displayName
+	}
 	user.Type = accountType
 	user.Email = email
 	user.UserId = "u-" + string(helper.GenerateRandomId())

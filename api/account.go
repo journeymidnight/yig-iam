@@ -24,26 +24,10 @@ func CreateAccount(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	var accountId []byte
-	loop := 0
-	for loop < 3 {
-		accountId = helper.GenerateRandomNumberId()
-		exist, err := db.CheckAccountIdExist(string(accountId))
-		helper.Logger.Println(5, "CreateAccount ENTER LOOP1 ", exist, err)
-		if exist == false && err == nil{
-			break
-		}
-		loop = loop + 1
-	}
-	helper.Logger.Println(5, "CreateAccount OUT LOOP", loop)
-	if loop >= 3 {
-		WriteErrorResponse(w, r, ErrInternalError)
-		return
-	}
-
-	err = db.CreateUser(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, string(accountId))
+	accountId := "u-" + string(helper.GenerateRandomId())
+	err = db.CreateUser(query.UserName, query.Password, ROLE_ACCOUNT, query.Email, query.DisplayName, accountId)
 	if err != nil {
-		WriteErrorResponse(w, r, ErrInternalError)
+		WriteErrorResponse(w, r, err)
 		return
 	}
 	helper.Enforcer.AddRoleForUser(query.UserName, ROLE_ACCOUNT)

@@ -119,8 +119,6 @@ type QueryRequest struct{
 	DisplayName string `json:"displayName,omitempty"`
 	Type string `json:"type,omitempty"`
 	Email string `json:"email,omitempty"`
-	Service string `json:"Service,omitempty"`
-	Quota string `json:"quota,omitempty"`
 	Token string `json:"token,omitempty"`
 	AccessKey string `json:"accessKey,omitempty"`
 	AccessKeys []string `json:"accessKeys,omitempty"`
@@ -128,37 +126,23 @@ type QueryRequest struct{
 	Offset int `json:"offset,omitempty"`
 }
 
-type QueryRespAll struct {
-	Message string    `json:"message"`
-	Data    interface{} `json:"data"`
-	RetCode int       `json:"retCode"`
-}
-
 /************compatible for YIG**************/
 
 type AccessKeyItem struct {
 	ProjectId    string `json:"projectId"`
-	Name         string `json:"name"`
+	ProjectName  string `json:"projectName"`
 	AccessKey    string `json:"accessKey"`
 	AccessSecret string `json:"accessSecret"`
+	Acl          string `json:"acl"`
 	Status       string `json:"status"`
 	Updated      string `json:"updated"`
-	Created		 string `json:"created"`
-	Description  string `json:"description"`
 }
 
-type FetchAccessKeyResp struct {
-	AccessKey string `json:"accessKey"`
-	AccessSecret string `json:"accessSecret"`
+type FetchAccessKeysResp struct {
+	AccessKeySet []AccessKeyItem `json:"accessKeySet"`
 }
 
 /***********************************/
-
-type QueryResponse struct {
-	RetCode int `json:"retCode"`
-	Data interface{} `json:"data"`
-	Message string `json:"message"`
-}
 
 type LoginResponse struct {
 	Token string `json:"token"`

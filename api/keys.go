@@ -70,20 +70,34 @@ func FetchSecretKey(w http.ResponseWriter, r *http.Request) {
 		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
 		return
 	}
-
+	if (query.AccessKey == "" && query.ProjectId == "") || (query.AccessKey != "" && query.ProjectId != ""){
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
 	if r.Header.Get("X-Le-Key") != helper.Config.ManageKey || r.Header.Get("X-Le-Secret") != helper.Config.ManageSecret {
 		helper.Logger.Println(5, "unauthorized request")
 		WriteErrorResponse(w, r, ErrNotAuthorised)
 		return
 	}
+	resp := FetchAccessKeysResp{}
 
-	up, err := db.GetUserProjectByAccessKey(query.AccessKey)
-	if err != nil {
-		WriteErrorResponse(w, r, err)
+	if query.AccessKey != "" {
+		items, err := db.GetKeyItemByAccessKey(query.AccessKey)
+		if err != nil {
+			WriteErrorResponse(w, r, err)
+		} else {
+			resp.AccessKeySet = items
+			WriteSuccessResponse(w, EncodeResponse(resp))
+		}
 	} else {
-		WriteSuccessResponse(w, EncodeResponse(up))
+		items, err := db.GetKeyItemsByProject(query.ProjectId)
+		if err != nil {
+			WriteErrorResponse(w, r, err)
+		} else {
+			resp.AccessKeySet = items
+			WriteSuccessResponse(w, EncodeResponse(resp))
+		}
 	}
-
 	return
 }
 //

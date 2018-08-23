@@ -121,7 +121,6 @@ type QueryRequest struct{
 	Email string `json:"email,omitempty"`
 	Token string `json:"token,omitempty"`
 	AccessKey string `json:"accessKey,omitempty"`
-	AccessKeys []string `json:"accessKeys,omitempty"`
 	Limit int `json:"limit,omitempty"`
 	Offset int `json:"offset,omitempty"`
 }

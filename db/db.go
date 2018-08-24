@@ -721,35 +721,32 @@ func ListExpiredTokens() (tokens []Token, err error) {
 //	return records, err
 //}
 
-//func GetKeysByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
-//	var items []AccessKeyItem
-//	var err error
-//	for _, key := range AccessKeys {
-//		var record AkSkRecord
-//		var item AccessKeyItem
-//		err = Db.QueryRow("select * from AkSk where accessKey=(?)", key).Scan(
-//			&record.AccessKey,
-//			&record.AccessSecret,
-//			&record.ProjectId,
-//			&record.AccountId,
-//			&record.KeyName,
-//			&record.Created,
-//			&record.Description)
-//		if err != nil {
-//			helper.Logger.Println(5, "GetKeysByAccessKeys err: ", err)
-//			continue
-//		}
-//		item.ProjectId = record.ProjectId
-//		item.AccessKey = record.AccessKey
-//		item.AccessSecret =  record.AccessSecret
-//		item.Name = record.KeyName
-//		item.Status = "active"
-//		item.Updated = record.Created
-//		item.Description = record.Description
-//		items = append(items, item)
-//	}
-//	return items, err
-//}
+func GetKeyItemsByAccessKeys(AccessKeys []string) ([]AccessKeyItem, error) {
+	var err error
+
+	items := make([]AccessKeyItem, 0)
+	for _, key := range AccessKeys {
+		var up UserProject
+		up.AccessKey = key
+		has, err := Engine().Get(&up)
+		if err != nil {
+			helper.Logger.Errorln("Error GetKeyItemsByAccessKeys by accessKey", key, err.Error())
+			return items, err
+		}
+		if has {
+			var item AccessKeyItem
+			item.ProjectId = up.ProjectId
+			item.Name = up.ProjectId
+			item.AccessKey = up.AccessKey
+			item.AccessSecret = up.AccessSecret
+			item.Acl = up.Acl
+			item.Status = up.Status
+			item.Updated = time.Time(up.UpdatedAt).Format("2006-01-02 15:04:05")
+			items = append(items, item)
+		}
+	}
+	return items, err
+}
 
 func GetKeyItemByAccessKey(AccessKey string) ([]AccessKeyItem, error) {
 	var err error
@@ -765,7 +762,7 @@ func GetKeyItemByAccessKey(AccessKey string) ([]AccessKeyItem, error) {
 	if has {
 		var item AccessKeyItem
 		item.ProjectId = up.ProjectId
-		item.ProjectName = up.ProjectId
+		item.Name = up.ProjectId
 		item.AccessKey = up.AccessKey
 		item.AccessSecret = up.AccessSecret
 		item.Acl = up.Acl
@@ -788,7 +785,7 @@ func GetKeyItemsByProject(projectId string) ([]AccessKeyItem, error) {
 	for _, up := range ups {
 		var item AccessKeyItem
 		item.ProjectId = up.ProjectId
-		item.ProjectName = up.ProjectId
+		item.Name = up.ProjectId
 		item.AccessKey = up.AccessKey
 		item.AccessSecret = up.AccessSecret
 		item.Acl = up.Acl

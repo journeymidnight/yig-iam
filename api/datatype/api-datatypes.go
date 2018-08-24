@@ -121,15 +121,20 @@ type QueryRequest struct{
 	Email string `json:"email,omitempty"`
 	Token string `json:"token,omitempty"`
 	AccessKey string `json:"accessKey,omitempty"`
+	AccessKeys []string `json:"accessKeys,omitempty"`
 	Limit int `json:"limit,omitempty"`
 	Offset int `json:"offset,omitempty"`
+}
+
+type FetchAccessKeysResp struct {
+	AccessKeySet []AccessKeyItem `json:"accessKeySet"`
 }
 
 /************compatible for YIG**************/
 
 type AccessKeyItem struct {
 	ProjectId    string `json:"projectId"`
-	ProjectName  string `json:"projectName"`
+	Name         string `json:"name"`
 	AccessKey    string `json:"accessKey"`
 	AccessSecret string `json:"accessSecret"`
 	Acl          string `json:"acl"`
@@ -137,8 +142,17 @@ type AccessKeyItem struct {
 	Updated      string `json:"updated"`
 }
 
-type FetchAccessKeysResp struct {
+type QueryResp struct {
+	Limit        int             `json:"limit"`
+	Total        int             `json:"total"`
+	Offset       int             `json:"offset"`
 	AccessKeySet []AccessKeyItem `json:"accessKeySet"`
+}
+
+type QueryRespAll struct {
+	Message string    `json:"message"`
+	Data    interface{} `json:"data"`
+	RetCode int       `json:"retCode"`
 }
 
 /***********************************/

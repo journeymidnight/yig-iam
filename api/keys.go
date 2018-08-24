@@ -100,6 +100,52 @@ func FetchSecretKey(w http.ResponseWriter, r *http.Request) {
 	}
 	return
 }
+
+//This is a legacy api for yig
+func DescribeKeys(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+	if (query.AccessKeys == nil && query.ProjectId == "") || (query.AccessKeys != nil && query.ProjectId != ""){
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
+	if r.Header.Get("X-Le-Key") != helper.Config.ManageKey || r.Header.Get("X-Le-Secret") != helper.Config.ManageSecret {
+		helper.Logger.Println(5, "unauthorized request")
+		WriteErrorResponse(w, r, ErrNotAuthorised)
+		return
+	}
+	resp := QueryResp{}
+
+	if query.AccessKeys != nil {
+		items, err := db.GetKeyItemsByAccessKeys(query.AccessKeys)
+		if err != nil {
+			WriteSuccessResponse(w, EncodeResponse(QueryRespAll{"failed DescribeAccessKeys", query, 4010}))
+		} else {
+			resp.AccessKeySet = items
+			resp.Limit = len(items)
+			resp.Offset = 0
+			resp.Total = resp.Limit
+			WriteSuccessResponse(w, EncodeResponse(QueryRespAll{"", resp, 0}))
+		}
+	} else {
+		items, err := db.GetKeyItemsByProject(query.ProjectId)
+		if err != nil {
+			WriteSuccessResponse(w, EncodeResponse(QueryRespAll{"failed ListAccessKeysByProject", query, 4010}))
+		} else {
+			resp.AccessKeySet = items
+			resp.Limit = len(items)
+			resp.Offset = 0
+			resp.Total = resp.Limit
+			WriteSuccessResponse(w, EncodeResponse(QueryRespAll{"", resp, 0}))
+		}
+	}
+	return
+}
 //
 //func FetchAccessKeysWithToken(w http.ResponseWriter, r *http.Request) {
 //	token, ok := r.Context().Value(REQUEST_TOKEN_KEY).(TokenRecord)

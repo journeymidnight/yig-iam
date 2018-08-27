@@ -101,6 +101,7 @@ func RegisterRequests(r *mux.Router) {
 	r.HandleFunc("/api/v1/user/list", ListUsers).Methods("GET")
 	r.HandleFunc("/api/v1/user/create", CreateUser).Methods("POST")
 	r.HandleFunc("/api/v1/user/delete", DeleteUser).Methods("POST")
+	r.HandleFunc("/api/v1/user/update", UpdateUser).Methods("POST")
 	r.HandleFunc("/api/v1/user/describe", DescribeUser).Methods("POST")
 	r.HandleFunc("/api/v1/user/listbyproject", ListUserByProject).Methods("POST")
 

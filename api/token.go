@@ -36,6 +36,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	token, err := db.SearchExistedToken(query.UserName)
+	if err == nil {
+		WriteSuccessResponse(w, EncodeResponse(ApiUserLoginResponse{token.Token, token.Type}))
+		return
+	}
+
 	uuid := uuid.New()
 	err = db.CreateToken(uuid.String(), user.UserId, user.UserName, user.AccountId, user.Type)
 	if err != nil {

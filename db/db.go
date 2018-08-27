@@ -342,6 +342,15 @@ func RemoveUser(userName string, accountId string) error {
 	return nil
 }
 
+func UpdateUser(user User) error {
+	_, err := Engine().Update(&user, &User{UserId:user.UserId})
+	if err != nil {
+		helper.Logger.Errorln("Error mark all projects deleted for account:", user.UserId, err.Error())
+		return err
+	}
+	return nil
+}
+
 func DescribeUser(userName string, accountId string) (user User, err error) {
 	user.UserName = userName
 	user.AccountId = accountId
@@ -622,6 +631,20 @@ func RemoveToken(token string) error {
 	} else {
 		helper.Logger.Println("token not existed:", token)
 		return ErrDbRecordNotFound
+	}
+}
+
+func SearchExistedToken(userName string) (token Token, err error) {
+	token.UserName = userName
+	has, err := Engine().Get(&token)
+	if err != nil {
+		helper.Logger.Errorln("Error describe token:", token, err.Error())
+		return token, err
+	}
+	if has {
+		return token, nil
+	} else {
+		return token, ErrDbRecordNotFound
 	}
 }
 

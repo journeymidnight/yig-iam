@@ -67,6 +67,45 @@ func DeleteUser(w http.ResponseWriter, r *http.Request)  {
 	return
 }
 
+func UpdateUser(w http.ResponseWriter, r *http.Request)  {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	body, _ := ioutil.ReadAll(r.Body)
+	query := &QueryRequest{}
+	err := json.Unmarshal(body, query)
+	if err != nil {
+		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
+		return
+	}
+
+	if query.UserName == "" && query.Password == "" && query.DisplayName == ""{
+		WriteErrorResponse(w, r, ErrInvalidParameters)
+		return
+	}
+
+	var user User
+	user.UserId = token.UserId
+	if query.Password != "" {
+		user.Password = query.Password
+	}
+	if query.Email != "" {
+		user.Email = query.Email
+	}
+	if query.DisplayName != "" {
+		user.DisplayName = query.DisplayName
+	}
+
+	err = db.UpdateUser(user)
+	if err != nil {
+		helper.Logger.Println(5, "failed DeleteUser for query:", query)
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	helper.Enforcer.DeleteRolesForUser(query.UserName)
+	helper.Enforcer.SavePolicy()
+	WriteSuccessResponse(w, nil)
+	return
+}
+
 func DescribeUser(w http.ResponseWriter, r *http.Request) {
 	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
 	body, _ := ioutil.ReadAll(r.Body)

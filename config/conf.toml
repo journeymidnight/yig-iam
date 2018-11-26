@@ -1,0 +1,12 @@
+# This is a TOML document. should be rename as conf.toml and put to /etc/yig-iam/conf.toml
+
+ManageKey = "key"
+ManageSecret = "secret"
+Logpath = "/var/log/yig-iam/iam.log"
+Loglevel = "info"
+Accesslog = "/var/log/yig-iam/access.log"
+PidFile = "/tmp/iam.pid"
+BindPort =  8888
+RbacDataSource = "root:@tcp(127.0.0.1:4000)/"
+UserDataSource = "root:@tcp(127.0.0.1:4000)/"
+TokenExpire = 36000

@@ -32,6 +32,10 @@ func Casbin_init () {
 	Enforcer.AddPolicy([]string{ROLE_USER, "/api/v1/project/list", "GET"})
 
 	Enforcer.AddPolicy([]string{ROLE_ROOT, "/api/v1/project/list", "GET"})
+	Enforcer.AddPolicy([]string{ROLE_ACCOUNT, "/api/v1/keys/list", "GET"})
+	Enforcer.AddPolicy([]string{ROLE_USER, "/api/v1/keys/list", "GET"})
+
+
 
 	Enforcer.AddRoleForUser("root", ROLE_ROOT)
 	Enforcer.AddRoleForUser("admin", ROLE_ACCOUNT)

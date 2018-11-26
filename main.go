@@ -112,6 +112,8 @@ func RegisterRequests(r *mux.Router) {
 	r.HandleFunc("/api/v1/project/listbyuser", ListProjectByUser).Methods("POST")
 	r.HandleFunc("/api/v1/project/linkuser", LinkUserWithProject).Methods("POST")
 	r.HandleFunc("/api/v1/project/unlinkuser", UnLinkUserWithProject).Methods("POST")
+
+	r.HandleFunc("/api/v1/keys/list", ListKeys).Methods("GET")
 }
 
 func ShowAPI(r *mux.Router) {

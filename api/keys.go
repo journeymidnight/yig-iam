@@ -147,29 +147,15 @@ func DescribeKeys(w http.ResponseWriter, r *http.Request) {
 	return
 }
 //
-//func FetchAccessKeysWithToken(w http.ResponseWriter, r *http.Request) {
-//	token, ok := r.Context().Value(REQUEST_TOKEN_KEY).(TokenRecord)
-//	if ok != false {
-//		store.Db.InsertOpRecord(token.UserName, OP_TYPE_SET_NTP)
-//	}
-//	body, _ := ioutil.ReadAll(r.Body)
-//	query := &QueryRequest{}
-//	err := json.Unmarshal(body, query)
-//	if err != nil {
-//		WriteErrorResponse(w, r, ErrJsonDecodeFailed)
-//		return
-//	}
-//	var resp DescribeKeysResp
-//	records, err := db.GetKeysByAccount(tokenRecord.AccountId)
-//	if err != nil {
-//		helper.Logger.Println(5, "failed DescribeProject for query:", query)
-//		c.JSON(iris.StatusOK, QueryResponse{RetCode:4010,Message:"failed DescribeProject",Data:query})
-//		return
-//	}
-//	resp.AccessKeySet = records
-//	resp.Limit = 20
-//	resp.Offset = 0
-//	resp.Total = len(records)
-//	c.JSON(iris.StatusOK, QueryResponse{RetCode:0,Message:"",Data:resp})
-//	return
-//}
+func ListKeys(w http.ResponseWriter, r *http.Request) {
+	token, _ := r.Context().Value(REQUEST_TOKEN_KEY).(Token)
+	records, err := db.GetKeyItemsByUserId(token.UserId)
+	helper.Logger.Infoln("user id:", token.UserId)
+	if err != nil {
+		helper.Logger.Println(5, "failed ListKeys for user:", token.UserId)
+		WriteErrorResponse(w, r, ErrDbRecordNotFound)
+		return
+	}
+	WriteSuccessResponse(w, EncodeResponse(records))
+	return
+}

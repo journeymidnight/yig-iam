@@ -818,3 +818,26 @@ func GetKeyItemsByProject(projectId string) ([]AccessKeyItem, error) {
 	}
 	return items, err
 }
+
+func GetKeyItemsByUserId(useId string) ([]AccessKeyItem, error) {
+	var err error
+	ups := make([]UserProject, 0)
+	items := make([]AccessKeyItem, 0)
+	err = Engine().Where("user_project.userId=?", useId).Find(&ups)
+	if err != nil {
+		helper.Logger.Println("Error GetKeyItemsByProject: ", err)
+		return items, err
+	}
+	for _, up := range ups {
+		var item AccessKeyItem
+		item.ProjectId = up.ProjectId
+		item.Name = up.ProjectId
+		item.AccessKey = up.AccessKey
+		item.AccessSecret = up.AccessSecret
+		item.Acl = up.Acl
+		item.Status = up.Status
+		item.Updated = time.Time(up.UpdatedAt).Format("2006-01-02 15:04:05")
+		items = append(items, item)
+	}
+	return items, err
+}

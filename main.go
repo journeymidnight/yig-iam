@@ -164,7 +164,10 @@ func main() {
 	n := negroni.New() // Includes some default middlewares
 	logrusMiddleWare := negronilogrus.NewMiddleware()
 	file, err := helper.OpenAccessLogFile()
-	if err == nil {
+	if err != nil {
+		fmt.Printf("can not create access log file %s, error:%s\n", helper.Config.AccessLog, err.Error())
+		return
+	} else {
 		logrusMiddleWare.Logger.Out = file
 		n.Use(logrusMiddleWare)
 		defer file.Close()

@@ -23,7 +23,7 @@ func init() {
 }
 
 // Static alphaNumeric table used for generating unique request ids
-var alphaNumericTable = []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var alphaNumericTable = []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 var NumericTable = []byte("0123456789")
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,8 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"github.com/dgrijalva/jwt-go"
-	"bytes"
 )
 
 var client = &http.Client{}
@@ -26,7 +25,7 @@ var token *string
 
 func printHelp() {
 	fmt.Println("Usage: admin <commands> [options...] ")
-	fmt.Println("Commands: login|bucket|object|user|cachehit")
+	fmt.Println("Commands: login|createaccount|createuser|listaccounts|createproject|listkeys")
 	fmt.Println("Options:")
 	fmt.Println(" -e, --endpoint   Specify endpoint of yig-iam")
 	fmt.Println(" -u, --user      Specify user name to login")
@@ -108,7 +107,34 @@ func createAccount(user , password, email, displayName string) {
 	request.Header.Set("Token", *token)
 	response, _ := client.Do(request)
 	if response.StatusCode != 200 {
-		fmt.Println("getBucketInfo failed as status != 200", response.StatusCode)
+		fmt.Println("createAccount failed as status != 200", response.StatusCode)
+		return
+	}
+
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+	prettyPrint(body)
+}
+
+func createUser(user , password, email, displayName string) {
+	if isParaEmpty(user) ||  isParaEmpty(password){
+		return
+	}
+
+	query := &QueryRequest{}
+	query.UserName = user
+	query.Password = password
+	query.Email = email
+	query.DisplayName = displayName
+
+	blob, _ := json.Marshal(query)
+
+	url := *endPoint + "/api/v1/user/create"
+	request, _ := http.NewRequest("POST", url, bytes.NewReader(blob))
+	request.Header.Set("Token", *token)
+	response, _ := client.Do(request)
+	if response.StatusCode != 200 {
+		fmt.Println("createUser failed as status != 200", response.StatusCode)
 		return
 	}
 
@@ -123,7 +149,7 @@ func listAccount() {
 	request.Header.Set("Token", *token)
 	response, _ := client.Do(request)
 	if response.StatusCode != 200 {
-		fmt.Println("getBucketInfo failed as status != 200", response.StatusCode)
+		fmt.Println("listAccount failed as status != 200", response.StatusCode)
 		return
 	}
 
@@ -173,68 +199,6 @@ func listkeys() {
 
 }
 
-func getObjectInfo(bucket string, object string) {
-	if isParaEmpty(bucket) || isParaEmpty(object) {
-		return
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"bucket": bucket,
-		"object": object,
-	})
-
-	tokenString, err := token.SignedString([]byte(config.AdminKey))
-
-	if err == nil {
-		//go use token
-		fmt.Printf("\nHS256 = %v\n", tokenString)
-	} else {
-		fmt.Println("internal error", err)
-		return
-	}
-
-	url := config.RequestUrl + "/admin/object"
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Set("Authorization", "Bearer "+tokenString)
-	response, _ := client.Do(request)
-	if response.StatusCode != 200 {
-		fmt.Println("getBucketInfo failed as status != 200", response.StatusCode)
-		return
-	}
-
-	defer response.Body.Close()
-	body, _ := ioutil.ReadAll(response.Body)
-	fmt.Println(string(body))
-}
-
-func getCacheHit() {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{})
-
-	tokenString, err := token.SignedString([]byte(config.AdminKey))
-
-	if err == nil {
-		//go use token
-		fmt.Printf("\nHS256 = %v\n", tokenString)
-	} else {
-		fmt.Println("internal error", err)
-		return
-	}
-
-	url := config.RequestUrl + "/admin/cachehit"
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Set("Authorization", "Bearer "+tokenString)
-	response, _ := client.Do(request)
-	if response.StatusCode != 200 {
-		fmt.Println("getBucketInfo failed as status != 200", response.StatusCode)
-		return
-	}
-
-	defer response.Body.Close()
-	body, _ := ioutil.ReadAll(response.Body)
-	fmt.Println(string(body))
-
-}
-
 func main() {
 	if len(os.Args) <= 1 {
 		printHelp()
@@ -257,14 +221,15 @@ func main() {
 		login(*user, *password)
 	case "createaccount":
 		createAccount(*user, *password, *email, *displayName)
+	case "createuser":
+		createUser(*user, *password, *email, *displayName)
 	case "listaccounts":
 		listAccount()
 	case "createproject":
 		createProject(*projectName, *description)
-	case "listkeys":
+	case "v":
 		listkeys()
-	//case "cachehit":
-	//	getCacheHit()
+
 	default:
 		printHelp()
 		return

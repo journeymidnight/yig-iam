@@ -12,6 +12,9 @@ build:
 	@[ -d $(GOBIN) ] || mkdir -p $(GOBIN)
 	@ln -nsf $(PWD) $(URLPATH)/$(REPO)
 	go build $(URL)/$(REPO)
+	go build -o yig-iam-tools $(URL)/$(REPO)/tools
 	cp -f yig-iam $(PWD)/build/bin/
+	cp -f yig-iam-tools $(PWD)/build/bin/
+
 clean:
 	rm -rf build

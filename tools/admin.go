@@ -227,7 +227,7 @@ func main() {
 		listAccount()
 	case "createproject":
 		createProject(*projectName, *description)
-	case "v":
+	case "listkeys":
 		listkeys()
 
 	default:

@@ -1,0 +1,11 @@
+compress
+/var/log/yig-iam/iam.log {
+    daily
+    rotate 7
+    missingok
+    compress
+    minsize 100k
+    copytruncate
+}
+
+

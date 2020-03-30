@@ -89,7 +89,7 @@ var AllRoutes []map[string]string
 
 func RegisterRequests(r *mux.Router) {
 	r.HandleFunc("/api/v1/login", Login).Methods("POST")
-	r.HandleFunc("/api/v1/yig/fetchkeys", FetchSecretKey).Methods("POST")
+	r.HandleFunc("/api/v1/yig/fetchsecretkey", FetchSecretKey).Methods("POST")
 	r.HandleFunc("/api/v1/yig/describekeys", DescribeKeys).Methods("POST")
 	r.HandleFunc("/api/v1/account/create", CreateAccount).Methods("POST")
 	r.HandleFunc("/api/v1/account/delete", DeleteAccount).Methods("POST")

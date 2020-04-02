@@ -25,7 +25,8 @@ var token *string
 
 func printHelp() {
 	fmt.Println("Usage: admin <commands> [options...] ")
-	fmt.Println("Commands: login|createaccount|createuser|listaccounts|createproject|listkeys")
+	fmt.Println("Commands: login|createaccount|createuser|listaccounts|listkeys")
+	fmt.Println("               |deleteaccount|deleteuser|listusers|")
 	fmt.Println("Options:")
 	fmt.Println(" -e, --endpoint   Specify endpoint of yig-iam")
 	fmt.Println(" -u, --user      Specify user name to login")
@@ -116,6 +117,29 @@ func createAccount(user , password, email, displayName string) {
 	prettyPrint(body)
 }
 
+func deleteAccount(user string) {
+	if isParaEmpty(user) {
+		return
+	}
+
+	query := &QueryRequest{}
+	query.UserName = user
+	blob, _ := json.Marshal(query)
+
+	url := *endPoint + "/api/v1/account/delete"
+	request, _ := http.NewRequest("POST", url, bytes.NewReader(blob))
+	request.Header.Set("Token", *token)
+	response, _ := client.Do(request)
+	if response.StatusCode != 200 {
+		fmt.Println("deleteAccount failed as status != 200", response.StatusCode)
+		return
+	}
+
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+	prettyPrint(body)
+}
+
 func createUser(user , password, email, displayName string) {
 	if isParaEmpty(user) ||  isParaEmpty(password){
 		return
@@ -143,13 +167,51 @@ func createUser(user , password, email, displayName string) {
 	prettyPrint(body)
 }
 
-func listAccount() {
+func deleteUser(user string) {
+	if isParaEmpty(user) {
+		return
+	}
+
+	query := &QueryRequest{}
+	query.UserName = user
+	blob, _ := json.Marshal(query)
+
+	url := *endPoint + "/api/v1/user/delete"
+	request, _ := http.NewRequest("POST", url, bytes.NewReader(blob))
+	request.Header.Set("Token", *token)
+	response, _ := client.Do(request)
+	if response.StatusCode != 200 {
+		fmt.Println("deleteUser failed as status != 200", response.StatusCode)
+		return
+	}
+
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+	prettyPrint(body)
+}
+
+func listAccounts() {
 	url := *endPoint + "/api/v1/account/list"
 	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Set("Token", *token)
 	response, _ := client.Do(request)
 	if response.StatusCode != 200 {
-		fmt.Println("listAccount failed as status != 200", response.StatusCode)
+		fmt.Println("listAccounts failed as status != 200", response.StatusCode)
+		return
+	}
+
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+	prettyPrint(body)
+}
+
+func listUsers() {
+	url := *endPoint + "/api/v1/user/list"
+	request, _ := http.NewRequest("GET", url, nil)
+	request.Header.Set("Token", *token)
+	response, _ := client.Do(request)
+	if response.StatusCode != 200 {
+		fmt.Println("listUsers failed as status != 200", response.StatusCode)
 		return
 	}
 
@@ -211,8 +273,8 @@ func main() {
 	token = mySet.String("t", "", "token")
 	email := mySet.String("m", "", "email")
 	displayName := mySet.String("d", "", "display name")
-	projectName := mySet.String("pn", "", "project name")
-	description := mySet.String("pd", "", "project description")
+	//projectName := mySet.String("pn", "", "project name")
+	//description := mySet.String("pd", "", "project description")
 	mySet.Parse(os.Args[2:])
 	fmt.Println("command:", os.Args[1], "user:", *user, "password:", *password)
 	fmt.Println("endPoint:", *endPoint, "token:", *token)
@@ -221,12 +283,18 @@ func main() {
 		login(*user, *password)
 	case "createaccount":
 		createAccount(*user, *password, *email, *displayName)
+	case "deleteaccount":
+		deleteAccount(*user)
 	case "createuser":
 		createUser(*user, *password, *email, *displayName)
+	case "deleteuser":
+		deleteUser(*user)
 	case "listaccounts":
-		listAccount()
-	case "createproject":
-		createProject(*projectName, *description)
+		listAccounts()
+	case "listusers":
+		listUsers()
+	//case "createproject":
+	//	createProject(*projectName, *description)
 	case "listkeys":
 		listkeys()
 

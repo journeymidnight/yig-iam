@@ -1,5 +1,5 @@
 [Unit]
-Description=yig
+Description=yig-iam
 After=network.target
 
 [Service]
@@ -8,7 +8,7 @@ LimitRSS=infinity
 LimitCORE=infinity
 LimitNOFILE=65535
 Type=simple
-ExecStart=/usr/bin/yig
+ExecStart=/usr/bin/yig-iam
 ExecStop=/usr/bin/kill $MAINPID
 Restart=always
 

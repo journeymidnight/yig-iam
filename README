@@ -1,17 +1,36 @@
-#Prepare
-####安装mysql 
+#编译
 
-设置root 12345678
+```
+cd ../yig-iam
+make
+```
 
-mysql -u root -p12345678
+#修改yig-iam配置文件
 
-创建db iam
+```
+mkdir /etc/yig-iam
+cp .../yig-iam/config/* /etc/yig-iam/
+vim /etc/yig-iam/conf.toml
+确保数据库连接配置正确
+```
 
-use iam
+#修改yig的配置文件
+```
+vim /etc/yig/yig.toml
+添加以下内容
 
-source config/create.sql
+[plugins.yig_iam]
+path = "/etc/yig/plugins/yig_iam_plugin.so"
+enable = true
+[plugins.yig_iam.args]
+EndPoint="http://127.0.0.1:8080/api/v1/yig/fetchsecretkey"
+ManageKey="key"
+ManageSecret="secret"
+```
 
-cp config/iam.json /etc/yig/iam.json
+#启动yig-iam
 
-#####测试用例
-test/api_test.go
+```
+./yig-iam
+
+```
